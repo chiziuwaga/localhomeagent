@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/*
+ * Brutalist Swiss design tokens.
+ * Black + white with bright red accent (oklch 0.6 0.2 30).
+ * Zero border radius, hard 4-8px offset shadows, monospace UI.
+ */
+
+@theme {
+  --font-sans: "Inter", "Helvetica Neue", "Arial", sans-serif;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "Menlo", monospace;
+  --color-accent: oklch(0.6 0.2 30);
+  --radius-default: 0;
+}
+
+html,
+body {
+  background: #ffffff;
+  color: #000000;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .shadow-brutal {
+    box-shadow: 8px 8px 0 0 #000;
+  }
+
+  .shadow-brutal-sm {
+    box-shadow: 4px 4px 0 0 #000;
+  }
+
+  .shadow-brutal-red {
+    box-shadow: 8px 8px 0 0 oklch(0.6 0.2 30);
+  }
+}
