@@ -1,0 +1,220 @@
+# Local Home Agent - System Prompts
+# These templates are used by the LLM for different contexts
+
+# ===========================================
+# CORE AGENT PROMPT
+# ===========================================
+core_agent: |
+  You are a helpful home assistant AI for a co-living property.
+  
+  Your responsibilities:
+  - Help residents control smart home devices
+  - Answer questions about the property
+  - Provide information about house rules and amenities
+  - Assist with common requests (WiFi info, maintenance contacts, etc.)
+  
+  Your personality:
+  - Friendly and helpful
+  - Concise but thorough
+  - Safety-conscious (never bypass security)
+  - Privacy-aware (don't share info between residents)
+  
+  Current context:
+  - Home: {{home_name}}
+  - User: {{user_name}} ({{user_role}})
+  - Time: {{current_time}}
+  - Active devices: {{device_count}}
+
+# ===========================================
+# GREETING PROMPTS
+# ===========================================
+greetings:
+  admin: |
+    Welcome back, {{user_name}}! As an admin, you have full access to all home controls.
+    What would you like to do today?
+  
+  resident: |
+    Hi {{user_name}}! I'm here to help you with anything around the house.
+    You can ask me to control lights, adjust the thermostat, or get information about the property.
+  
+  guest: |
+    Welcome to {{home_name}}! I'm your AI assistant for your stay.
+    I can help you with basic controls and answer questions about the property.
+    Note: Some features are limited for guest accounts.
+
+# ===========================================
+# DEVICE CONTROL PROMPTS
+# ===========================================
+device_control:
+  confirm_action: |
+    I'll {{action}} the {{device_name}} for you.
+    [Confirm] [Cancel]
+  
+  high_risk_warning: |
+    ⚠️ This is a sensitive action that requires verification.
+    {{action_description}}
+    Please enter your PIN to proceed.
+  
+  success: |
+    ✅ Done! The {{device_name}} has been {{action_past_tense}}.
+  
+  failure: |
+    ❌ Sorry, I couldn't {{action}} the {{device_name}}.
+    Error: {{error_message}}
+    Would you like me to try again?
+
+# ===========================================
+# SECURITY PROMPTS
+# ===========================================
+security:
+  verification_required: |
+    🔐 Security Verification Required
+    
+    This action ({{action}}) requires additional verification.
+    Energy level: {{energy_level}}
+    
+    Please verify using one of these methods:
+    1. Enter your 4-digit PIN
+    2. Speak your passphrase
+    3. Use biometric authentication (if available)
+  
+  action_denied: |
+    🚫 Action Denied
+    
+    This action ({{action}}) has been blocked due to security concerns.
+    Risk level: {{risk_level}}
+    
+    If you believe this is an error, please contact the property admin.
+  
+  emergency_mode: |
+    🚨 EMERGENCY MODE ACTIVATED
+    
+    All automations have been stopped.
+    All doors are locked.
+    All lights are on.
+    The property manager has been notified.
+    
+    To deactivate, an admin must enter their PIN.
+
+# ===========================================
+# INTENT PATTERNS
+# ===========================================
+intents:
+  light_control:
+    patterns:
+      - "turn on the {{room}} light"
+      - "turn off the {{room}} light"
+      - "dim the {{room}} to {{level}}"
+      - "set {{room}} brightness to {{level}}"
+    tool: "light"
+    
+  thermostat:
+    patterns:
+      - "set temperature to {{temp}}"
+      - "make it {{warmer|cooler}}"
+      - "what's the temperature"
+      - "set thermostat to {{temp}} degrees"
+    tool: "climate"
+    
+  lock_control:
+    patterns:
+      - "lock the {{door}}"
+      - "unlock the {{door}}"
+      - "lock all doors"
+      - "are the doors locked"
+    tool: "lock"
+    requires_verification: true
+    
+  scene_activation:
+    patterns:
+      - "activate {{scene}} scene"
+      - "good night"
+      - "movie time"
+      - "I'm leaving"
+      - "I'm home"
+    tool: "scene"
+    
+  information:
+    patterns:
+      - "what's the wifi password"
+      - "who's the property manager"
+      - "what are the house rules"
+      - "when is quiet hours"
+    tool: "info"
+
+# ===========================================
+# ERROR MESSAGES
+# ===========================================
+errors:
+  device_not_found: |
+    I couldn't find a device called "{{device_name}}".
+    Available devices: {{available_devices}}
+  
+  permission_denied: |
+    Sorry, your account ({{user_role}}) doesn't have permission for this action.
+    Please contact an admin if you need access.
+  
+  home_assistant_offline: |
+    I'm having trouble connecting to the home automation system.
+    Some device controls may not work right now.
+    Please try again in a few moments.
+  
+  llm_unavailable: |
+    I'm running in limited mode because the AI model isn't available.
+    Basic commands still work, but I can't have natural conversations.
+    
+    To enable full AI: Install Ollama and run `ollama pull llama3.2:3b`
+
+# ===========================================
+# AUTOMATION TEMPLATES (JSON)
+# ===========================================
+automation_templates:
+  morning_routine:
+    name: "Morning Routine"
+    trigger:
+      platform: time
+      at: "07:00:00"
+    condition:
+      - condition: time
+        weekday: [mon, tue, wed, thu, fri]
+    action:
+      - service: light.turn_on
+        target: bedroom
+        data:
+          brightness: 50
+          transition: 300
+      - service: climate.set_temperature
+        data:
+          temperature: 72
+  
+  away_mode:
+    name: "Away Mode"
+    trigger:
+      platform: zone
+      entity_id: device_tracker.phone
+      zone: home
+      event: leave
+    action:
+      - service: light.turn_off
+        target: all
+      - service: lock.lock
+        target: all
+      - service: climate.set_preset_mode
+        data:
+          preset_mode: away
+  
+  motion_lights:
+    name: "Motion-Activated Lights"
+    trigger:
+      platform: state
+      entity_id: binary_sensor.motion
+      to: "on"
+    condition:
+      - condition: sun
+        after: sunset
+    action:
+      - service: light.turn_on
+        target: "{{trigger.entity_id | replace('binary_sensor.motion', 'light')}}"
+      - delay: "00:05:00"
+      - service: light.turn_off
+        target: "{{trigger.entity_id | replace('binary_sensor.motion', 'light')}}"

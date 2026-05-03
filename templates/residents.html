@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resident Chat - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            border-bottom: 3px solid black;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav a {
+            padding: 6px 12px;
+            background: white;
+            border: 2px solid black;
+            text-decoration: none;
+            color: black;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            background: #ffeb3b;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 3px solid black;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            border-bottom: 2px solid black;
+            font-weight: bold;
+        }
+
+        .user-list, .room-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .user-item, .room-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .user-item:hover, .room-item:hover {
+            background: #f9f9f9;
+        }
+
+        .user-item.active, .room-item.active {
+            background: #ffeb3b;
+            border-left: 4px solid black;
+        }
+
+        .user-name, .room-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .user-status {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .unread-badge {
+            display: inline-block;
+            background: #ff3333;
+            color: white;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .chat-header {
+            padding: 15px 20px;
+            border-bottom: 2px solid black;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            background: black;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            max-width: 60%;
+        }
+
+        .message-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+        }
+
+        .message-sender {
+            font-weight: bold;
+        }
+
+        .message-time {
+            color: #666;
+        }
+
+        .message-bubble {
+            padding: 12px 16px;
+            border: 2px solid black;
+            background: white;
+            word-wrap: break-word;
+        }
+
+        .message.sent .message-bubble {
+            background: #ffeb3b;
+        }
+
+        .input-container {
+            padding: 15px 20px;
+            border-top: 2px solid black;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.3);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: black;
+            color: white;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #ff3333;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 250px;
+            }
+
+            .message-content {
+                max-width: 80%;
+            }
+        }
+
+        .create-room-btn {
+            margin: 10px;
+            padding: 10px;
+            background: #ffeb3b;
+            border: 2px solid black;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .create-room-btn:hover {
+            background: black;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><span class="accent">●</span> Resident Chat</h1>
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/chat">AI Chat</a>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="sidebar-header">Direct Messages</div>
+            <div class="user-list" id="userList">
+                <div class="empty-state" style="padding: 20px; text-align: center;">
+                    No users online
+                </div>
+            </div>
+            <div class="sidebar-header">Chat Rooms</div>
+            <div class="create-room-btn" onclick="createRoom()">+ Create Room</div>
+            <div class="room-list" id="roomList">
+                <div class="empty-state" style="padding: 20px; text-align: center;">
+                    No rooms
+                </div>
+            </div>
+        </div>
+
+        <div class="main-chat">
+            <div class="chat-header">
+                <div class="chat-title" id="chatTitle">Select a conversation</div>
+                <div id="chatInfo"></div>
+            </div>
+
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">
+                    <div style="font-size: 3rem;">💬</div>
+                    <div>Select a user or room to start chatting</div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    disabled
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let currentUserName = 'User ' + Math.floor(Math.random() * 1000);
+        let currentChatType = null; // 'direct' or 'room'
+        let currentChatId = null;
+        let ws = null;
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'chat_message') {
+                    handleIncomingMessage(data.payload);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        // Load users and rooms
+        async function loadUsersAndRooms() {
+            try {
+                // Load users
+                const usersRes = await fetch('/api/users');
+                const users = await usersRes.json();
+                renderUsers(users);
+
+                // Load rooms
+                const roomsRes = await fetch(`/api/chat/rooms/${currentUserId}`);
+                const roomsData = await roomsRes.json();
+                renderRooms(roomsData.rooms || []);
+            } catch (error) {
+                console.error('Error loading users and rooms:', error);
+            }
+        }
+
+        function renderUsers(users) {
+            const userList = document.getElementById('userList');
+            if (users.length === 0) {
+                userList.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center;">No users online</div>';
+                return;
+            }
+
+            userList.innerHTML = users
+                .filter(u => u.id !== currentUserId)
+                .map(user => `
+                    <div class="user-item" onclick="selectUser('${user.id}', '${user.name}')">
+                        <div class="user-name">${user.name}</div>
+                        <div class="user-status">${user.role}</div>
+                    </div>
+                `).join('');
+        }
+
+        function renderRooms(rooms) {
+            const roomList = document.getElementById('roomList');
+            if (rooms.length === 0) {
+                roomList.innerHTML = '<div class="empty-state" style="padding: 20px; text-align: center;">No rooms</div>';
+                return;
+            }
+
+            roomList.innerHTML = rooms.map(room => `
+                <div class="room-item" onclick="selectRoom('${room.id}', '${room.name}')">
+                    <div class="room-name">${room.name}</div>
+                    <div class="user-status">${room.members.length} members</div>
+                </div>
+            `).join('');
+        }
+
+        async function selectUser(userId, userName) {
+            currentChatType = 'direct';
+            currentChatId = userId;
+
+            document.getElementById('chatTitle').textContent = userName;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            // Load conversation
+            try {
+                const res = await fetch(`/api/chat/conversation/${currentUserId}/${userId}`);
+                const data = await res.json();
+                renderMessages(data.messages || []);
+            } catch (error) {
+                console.error('Error loading conversation:', error);
+            }
+
+            // Highlight selected user
+            document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        async function selectRoom(roomId, roomName) {
+            currentChatType = 'room';
+            currentChatId = roomId;
+
+            document.getElementById('chatTitle').textContent = roomName;
+            document.getElementById('messageInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+
+            // Load room messages
+            try {
+                const res = await fetch(`/api/chat/room/${roomId}/messages`);
+                const data = await res.json();
+                renderMessages(data.messages || []);
+            } catch (error) {
+                console.error('Error loading room messages:', error);
+            }
+
+            // Highlight selected room
+            document.querySelectorAll('.room-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function renderMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            if (messages.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div style="font-size: 3rem;">💬</div><div>No messages yet. Start the conversation!</div></div>';
+                return;
+            }
+
+            container.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentUserId;
+                const initials = msg.sender_name.split(' ').map(n => n[0]).join('').toUpperCase();
+                const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="message ${isSent ? 'sent' : ''}">
+                        <div class="message-avatar">${initials}</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                                <span class="message-sender">${msg.sender_name}</span>
+                                <span class="message-time">${time}</span>
+                            </div>
+                            <div class="message-bubble">${msg.content}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (!content || !currentChatType || !currentChatId) return;
+
+            try {
+                const endpoint = currentChatType === 'direct' ? '/api/chat/direct' : '/api/chat/room';
+                const payload = currentChatType === 'direct' 
+                    ? {
+                        sender_id: currentUserId,
+                        sender_name: currentUserName,
+                        recipient_id: currentChatId,
+                        content: content
+                    }
+                    : {
+                        sender_id: currentUserId,
+                        sender_name: currentUserName,
+                        room_id: currentChatId,
+                        content: content
+                    };
+
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    input.value = '';
+                    // Message will be added via WebSocket
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+
+        function handleIncomingMessage(message) {
+            // Only update if we're viewing the relevant conversation
+            if (currentChatType === 'direct' && 
+                (message.sender_id === currentChatId || message.recipient_id === currentChatId)) {
+                // Reload conversation
+                fetch(`/api/chat/conversation/${currentUserId}/${currentChatId}`)
+                    .then(res => res.json())
+                    .then(data => renderMessages(data.messages || []));
+            } else if (currentChatType === 'room' && message.room_id === currentChatId) {
+                // Reload room messages
+                fetch(`/api/chat/room/${currentChatId}/messages`)
+                    .then(res => res.json())
+                    .then(data => renderMessages(data.messages || []));
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function createRoom() {
+            const roomName = prompt('Enter room name:');
+            if (!roomName) return;
+
+            // For now, create a room with just the current user
+            fetch('/api/chat/rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: roomName,
+                    description: '',
+                    members: [currentUserId],
+                    created_by: currentUserId,
+                    is_private: false
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadUsersAndRooms();
+                }
+            })
+            .catch(error => console.error('Error creating room:', error));
+        }
+
+        // Initialize
+        initWebSocket();
+        loadUsersAndRooms();
+        setInterval(loadUsersAndRooms, 10000); // Refresh every 10 seconds
+    </script>
+</body>
+</html>

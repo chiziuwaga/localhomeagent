@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        #animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid black;
+            text-decoration: none;
+            color: black;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            background: #ffeb3b;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        .nav a.active {
+            background: black;
+            color: white;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 3px solid black;
+            padding: 20px;
+            transition: all 0.3s;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 6px 6px 0 black;
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid black;
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .device {
+            padding: 12px;
+            border: 2px solid black;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .device:hover {
+            background: #f0f0f0;
+        }
+
+        .device-info {
+            flex: 1;
+        }
+
+        .device-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .device-type {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .device-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: black;
+            color: white;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #ff3333;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        button.secondary {
+            background: white;
+            color: black;
+        }
+
+        button.secondary:hover {
+            background: #ffeb3b;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .status-on {
+            background: #4caf50;
+        }
+
+        .status-off {
+            background: #999;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat {
+            background: white;
+            border: 3px solid black;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .stat:hover {
+            background: #ffeb3b;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .user {
+            padding: 10px;
+            border: 2px solid black;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-role {
+            padding: 4px 8px;
+            background: black;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .user-role.admin {
+            background: #ff3333;
+        }
+
+        .user-role.resident {
+            background: #2196f3;
+        }
+
+        .user-role.guest {
+            background: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            border: 2px dashed #ccc;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .device-controls {
+                flex-direction: column;
+            }
+        }
+
+        .energy-meter {
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid black;
+            background: #f9f9f9;
+        }
+
+        .energy-bar {
+            height: 30px;
+            background: #e0e0e0;
+            border: 2px solid black;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #ffeb3b, #ff3333);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-actions button {
+            flex: 1;
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="animated-bg"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1><span class="accent">●</span> Home Dashboard</h1>
+            <p id="homeName">Loading...</p>
+            <div class="nav">
+                <a href="/" class="secondary">Home</a>
+                <a href="/dashboard" class="active">Dashboard</a>
+                <a href="/chat">Chat</a>
+                <a href="/setup">Settings</a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="deviceCount">0</div>
+                <div class="stat-label">Devices</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="userCount">0</div>
+                <div class="stat-label">Users</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="messageCount">0</div>
+                <div class="stat-label">Messages</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">
+                    <span class="status-indicator status-on"></span>
+                </div>
+                <div class="stat-label">System Online</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>Smart Devices</h2>
+                <div id="deviceList" class="device-list">
+                    <div class="empty-state">No devices connected</div>
+                </div>
+                <div class="quick-actions">
+                    <button onclick="refreshDevices()">Refresh</button>
+                    <button class="secondary" onclick="addDevice()">Add Device</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Active Users</h2>
+                <div id="userList" class="user-list">
+                    <div class="empty-state">No users online</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Energy Monitor</h2>
+                <div class="energy-meter">
+                    <p style="margin-bottom: 10px;">System Energy Usage</p>
+                    <div class="energy-bar">
+                        <div class="energy-fill" id="energyFill" style="width: 45%;">45%</div>
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: #666;">
+                        Energy budget: <span id="energyBudget">550/1000</span>
+                    </p>
+                </div>
+                <div class="quick-actions">
+                    <button onclick="resetEnergy()">Reset Energy</button>
+                    <button class="secondary" onclick="viewSwarmStatus()">View Swarm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animated background
+        const canvas = document.getElementById('animated-bg');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const shapes = [];
+        for (let i = 0; i < 8; i++) {
+            shapes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 40 + Math.random() * 60,
+                dx: (Math.random() - 0.5) * 0.5,
+                dy: (Math.random() - 0.5) * 0.5,
+                type: Math.floor(Math.random() * 3)
+            });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            
+            shapes.forEach(shape => {
+                ctx.beginPath();
+                if (shape.type === 0) {
+                    ctx.rect(shape.x, shape.y, shape.size, shape.size);
+                } else if (shape.type === 1) {
+                    ctx.arc(shape.x, shape.y, shape.size / 2, 0, Math.PI * 2);
+                } else {
+                    ctx.moveTo(shape.x, shape.y - shape.size / 2);
+                    ctx.lineTo(shape.x + shape.size / 2, shape.y + shape.size / 2);
+                    ctx.lineTo(shape.x - shape.size / 2, shape.y + shape.size / 2);
+                    ctx.closePath();
+                }
+                ctx.stroke();
+                
+                shape.x += shape.dx;
+                shape.y += shape.dy;
+                
+                if (shape.x < -shape.size) shape.x = canvas.width + shape.size;
+                if (shape.x > canvas.width + shape.size) shape.x = -shape.size;
+                if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
+                if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+
+        // Dashboard functionality
+        async function loadDashboard() {
+            try {
+                // Load settings
+                const settingsRes = await fetch('/api/settings');
+                const settings = await settingsRes.json();
+                document.getElementById('homeName').textContent = settings.home_name;
+
+                // Load devices
+                const devicesRes = await fetch('/api/devices');
+                const devices = await devicesRes.json();
+                document.getElementById('deviceCount').textContent = devices.length;
+                renderDevices(devices);
+
+                // Load users
+                const usersRes = await fetch('/api/users');
+                const users = await usersRes.json();
+                document.getElementById('userCount').textContent = users.length;
+                renderUsers(users);
+
+                // Load messages count
+                const messagesRes = await fetch('/api/messages');
+                const messages = await messagesRes.json();
+                document.getElementById('messageCount').textContent = messages.length;
+
+                // Load swarm status for energy
+                const swarmRes = await fetch('/api/swarm/status');
+                const swarm = await swarmRes.json();
+                updateEnergyDisplay(swarm);
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('homeName').textContent = 'Error loading dashboard';
+            }
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function renderDevices(devices) {
+            const deviceList = document.getElementById('deviceList');
+            if (devices.length === 0) {
+                deviceList.innerHTML = '<div class="empty-state">No devices connected</div>';
+                return;
+            }
+
+            deviceList.innerHTML = devices.map(device => `
+                <div class="device">
+                    <div class="device-info">
+                        <div class="device-name">
+                            <span class="status-indicator ${device.state && device.state.on ? 'status-on' : 'status-off'}"></span>
+                            ${escapeHtml(device.name || '')}
+                        </div>
+                        <div class="device-type">${escapeHtml(device.type || '')}</div>
+                    </div>
+                    <div class="device-controls">
+                        <button onclick="toggleDevice('${escapeHtml(device.id)}', ${!(device.state && device.state.on)})">
+                            ${device.state && device.state.on ? 'Turn Off' : 'Turn On'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderUsers(users) {
+            const userList = document.getElementById('userList');
+            if (users.length === 0) {
+                userList.innerHTML = '<div class="empty-state">No users online</div>';
+                return;
+            }
+
+            userList.innerHTML = users.map(user => `
+                <div class="user">
+                    <div>
+                        <strong>${escapeHtml(user.name || '')}</strong>
+                        <div style="font-size: 0.9rem; color: #666;">ID: ${escapeHtml(user.id || '')}</div>
+                    </div>
+                    <span class="user-role ${escapeHtml(user.role || '')}">${escapeHtml((user.role || '').toUpperCase())}</span>
+                </div>
+            `).join('');
+        }
+
+        function updateEnergyDisplay(swarm) {
+            if (!swarm || !swarm.agents) return;
+            
+            const totalEnergy = swarm.agents.reduce((sum, agent) => sum + agent.energy_budget, 0);
+            const maxEnergy = swarm.agents.length * 1000;
+            const percentage = Math.round((totalEnergy / maxEnergy) * 100);
+            
+            const energyFill = document.getElementById('energyFill');
+            const energyBudget = document.getElementById('energyBudget');
+            
+            energyFill.style.width = percentage + '%';
+            energyFill.textContent = percentage + '%';
+            energyBudget.textContent = `${totalEnergy}/${maxEnergy}`;
+        }
+
+        async function toggleDevice(deviceId, turnOn) {
+            try {
+                const response = await fetch(`/api/devices/${deviceId}/control`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-User-Id': 'admin',
+                        'X-User-Role': 'admin'
+                    },
+                    body: JSON.stringify({ on: turnOn })
+                });
+
+                if (response.ok) {
+                    await loadDashboard();
+                } else {
+                    alert('Failed to control device');
+                }
+            } catch (error) {
+                console.error('Error controlling device:', error);
+                alert('Error controlling device');
+            }
+        }
+
+        async function refreshDevices() {
+            await loadDashboard();
+        }
+
+        function addDevice() {
+            alert('Add device feature coming soon! Connect via Home Assistant integration.');
+        }
+
+        async function resetEnergy() {
+            try {
+                const response = await fetch('/api/swarm/reset-energy', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    await loadDashboard();
+                    alert('Energy reset successfully!');
+                }
+            } catch (error) {
+                console.error('Error resetting energy:', error);
+            }
+        }
+
+        async function viewSwarmStatus() {
+            try {
+                const res = await fetch('/api/swarm/status');
+                const data = await res.json();
+                alert(JSON.stringify(data, null, 2));
+            } catch (e) {
+                alert('Failed to load swarm status');
+            }
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+
+        // Refresh every 10 seconds
+        setInterval(loadDashboard, 10000);
+    </script>
+</body>
+</html>

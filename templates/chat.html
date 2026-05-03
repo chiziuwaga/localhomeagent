@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Local Home Agent</title>
+    <link rel="stylesheet" href="/static/css/callable-ui.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: white;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: white;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 black;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            padding: 15px;
+            border: 2px solid black;
+            border-radius: 0;
+            max-width: 80%;
+            animation: messageEnter 0.3s ease-out;
+        }
+
+        @keyframes messageEnter {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: #ffeb3b;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: #e3f2fd;
+        }
+
+        .message.system {
+            align-self: center;
+            background: #f5f5f5;
+            border-style: dashed;
+            font-size: 0.9rem;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .message-content {
+            line-height: 1.5;
+        }
+
+        .thinking {
+            padding: 15px;
+            border: 2px dashed black;
+            background: #fff;
+            max-width: 80%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .input-container {
+            padding: 20px;
+            border-top: 3px solid black;
+            background: white;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.3);
+            transform: scale(1.01);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: black;
+            color: white;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            background: #ff3333;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid black;
+            text-decoration: none;
+            color: black;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: #ffeb3b;
+            transform: translateX(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .message {
+                max-width: 90%;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="animated-bg"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1><span class="accent">●</span> Home Agent Chat</h1>
+            <p>Talk to your local AI assistant</p>
+            <a href="/" class="back-link">← Back to Home</a>
+        </div>
+
+        <div class="chat-container">
+            <div class="messages" id="messages">
+                <div class="message system">
+                    <div class="message-content">
+                        Welcome! I'm your local home assistant. How can I help you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..."
+                    autocomplete="off"
+                >
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animated background (same as index.html)
+        const canvas = document.getElementById('animated-bg');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const shapes = [];
+        for (let i = 0; i < 8; i++) {
+            shapes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 40 + Math.random() * 60,
+                dx: (Math.random() - 0.5) * 0.5,
+                dy: (Math.random() - 0.5) * 0.5,
+                type: Math.floor(Math.random() * 3)
+            });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            
+            shapes.forEach(shape => {
+                ctx.beginPath();
+                if (shape.type === 0) {
+                    ctx.rect(shape.x, shape.y, shape.size, shape.size);
+                } else if (shape.type === 1) {
+                    ctx.arc(shape.x, shape.y, shape.size / 2, 0, Math.PI * 2);
+                } else {
+                    ctx.moveTo(shape.x, shape.y - shape.size / 2);
+                    ctx.lineTo(shape.x + shape.size / 2, shape.y + shape.size / 2);
+                    ctx.lineTo(shape.x - shape.size / 2, shape.y + shape.size / 2);
+                    ctx.closePath();
+                }
+                ctx.stroke();
+                
+                shape.x += shape.dx;
+                shape.y += shape.dy;
+                
+                if (shape.x < -shape.size) shape.x = canvas.width + shape.size;
+                if (shape.x > canvas.width + shape.size) shape.x = -shape.size;
+                if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
+                if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+
+        // Chat functionality
+        const messagesDiv = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+
+        function addMessage(content, role = 'user') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            headerDiv.textContent = role === 'user' ? 'You' : role === 'assistant' ? 'Assistant' : 'System';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Process callable UI blocks for assistant messages
+            if (role === 'assistant' && typeof CallableUI !== 'undefined') {
+                contentDiv.innerHTML = CallableUI.processMessage(content);
+                // Initialize interactive components (timers, animations)
+                setTimeout(() => CallableUI.initializeComponents(contentDiv), 0);
+            } else {
+                contentDiv.textContent = content;
+            }
+            
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesDiv.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showThinking() {
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'thinking';
+            thinkingDiv.id = 'thinking';
+            thinkingDiv.textContent = 'Thinking...';
+            messagesDiv.appendChild(thinkingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function hideThinking() {
+            const thinkingDiv = document.getElementById('thinking');
+            if (thinkingDiv) {
+                thinkingDiv.remove();
+            }
+        }
+
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            if (!content) return;
+
+            // Add user message
+            addMessage(content, 'user');
+            messageInput.value = '';
+            sendButton.disabled = true;
+
+            // Show thinking indicator
+            showThinking();
+
+            try {
+                // Send to API
+                const response = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: `msg_${Date.now()}`,
+                        user_id: 'user',
+                        content: content,
+                        role: 'user',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Hide thinking
+                hideThinking();
+
+                // Add assistant response
+                if (data.success && data.response) {
+                    addMessage(data.response.content, 'assistant');
+                } else {
+                    addMessage('Sorry, I encountered an error.', 'system');
+                }
+            } catch (error) {
+                hideThinking();
+                addMessage(`Error: ${error.message}`, 'system');
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Focus input on load
+        messageInput.focus();
+    </script>
+    
+    <!-- Callable UI Library - must load after DOM -->
+    <script src="/static/js/callable-ui.js"></script>
+</body>
+</html>

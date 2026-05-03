@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff3333">
+    <title>Dashboard - {{ home_name }}</title>
+    <style>
+        /* ============================================================
+           DASHBOARD - NEO-BRUTALIST + SWISS DESIGN
+           ============================================================ */
+
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-elevated: #222222;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            
+            --accent-primary: #ff3333;
+            --accent-secondary: #ff6b6b;
+            --accent-glow: rgba(255, 51, 51, 0.3);
+            
+            --success: #00ff88;
+            --success-glow: rgba(0, 255, 136, 0.2);
+            --warning: #ffaa00;
+            --error: #ff3333;
+            --info: #00aaff;
+            
+            --border-color: #ffffff;
+            --border-subtle: #333333;
+            
+            --font-mono: 'Courier New', monospace;
+            
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            
+            --shadow-sm: 4px 4px 0 var(--accent-primary);
+            --shadow-md: 6px 6px 0 var(--accent-primary);
+            
+            --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+            --duration-fast: 150ms;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Grid overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ============================================================
+           NAVIGATION
+           ============================================================ */
+
+        .nav {
+            background: var(--bg-secondary);
+            border-bottom: 3px solid var(--border-color);
+            padding: var(--space-4) var(--space-6);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+            50% { box-shadow: 0 0 0 8px transparent; }
+        }
+
+        .nav-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        .nav-link {
+            padding: var(--space-2) var(--space-4);
+            background: transparent;
+            border: 2px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-glow);
+        }
+
+        /* ============================================================
+           MAIN LAYOUT
+           ============================================================ */
+
+        .main {
+            padding: var(--space-6);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            margin-bottom: var(--space-6);
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: var(--space-2);
+        }
+
+        /* ============================================================
+           STATS GRID
+           ============================================================ */
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 3px solid var(--border-subtle);
+            padding: var(--space-5);
+            transition: all var(--duration-fast) var(--ease-out);
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .stat-value.success { color: var(--success); }
+        .stat-value.warning { color: var(--warning); }
+        .stat-value.error { color: var(--error); }
+
+        .stat-trend {
+            font-size: 0.8rem;
+            margin-top: var(--space-2);
+        }
+
+        .stat-trend.up { color: var(--success); }
+        .stat-trend.down { color: var(--error); }
+
+        /* ============================================================
+           DEVICE GRID
+           ============================================================ */
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-5);
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
+        }
+
+        .device-card {
+            background: var(--bg-card);
+            border: 3px solid var(--border-subtle);
+            overflow: hidden;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .device-card:hover {
+            border-color: var(--text-secondary);
+        }
+
+        .device-card.active {
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px var(--success-glow);
+        }
+
+        .device-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4);
+            border-bottom: 2px solid var(--border-subtle);
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .device-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .device-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .device-room {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-1);
+        }
+
+        .device-toggle {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .device-toggle::after {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            background: var(--text-secondary);
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .device-toggle.on {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .device-toggle.on::after {
+            left: calc(100% - 21px);
+            background: #000000;
+        }
+
+        .device-body {
+            padding: var(--space-4);
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .device-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .device-status-dot.online { background: var(--success); }
+        .device-status-dot.offline { background: var(--error); }
+
+        .device-controls {
+            display: flex;
+            gap: var(--space-2);
+            margin-top: var(--space-3);
+        }
+
+        .device-btn {
+            flex: 1;
+            padding: var(--space-2);
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .device-btn:hover {
+            background: var(--bg-elevated);
+            border-color: var(--accent-primary);
+        }
+
+        /* ============================================================
+           ACTIVITY FEED
+           ============================================================ */
+
+        .activity-section {
+            background: var(--bg-secondary);
+            border: 3px solid var(--border-subtle);
+            margin-bottom: var(--space-8);
+        }
+
+        .activity-header {
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 2px solid var(--border-subtle);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .activity-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-3);
+            padding: var(--space-4) var(--space-5);
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background var(--duration-fast) var(--ease-out);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .activity-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-text {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .activity-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: var(--space-1);
+        }
+
+        /* ============================================================
+           QUICK ACTIONS
+           ============================================================ */
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-4);
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-5);
+            background: var(--bg-secondary);
+            border: 3px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all var(--duration-fast) var(--ease-out);
+        }
+
+        .action-btn:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--shadow-sm);
+            transform: translateY(-2px);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .action-icon {
+            font-size: 1.8rem;
+        }
+
+        .action-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+
+        @media (max-width: 768px) {
+            .nav {
+                padding: var(--space-3) var(--space-4);
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .main {
+                padding: var(--space-4);
+            }
+
+            .page-title {
+                font-size: 1.4rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <a href="/" class="nav-brand">
+            <span class="nav-dot"></span>
+            <span class="nav-title">{{ home_name }}</span>
+        </a>
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-link active">Dashboard</a>
+            <a href="/chat" class="nav-link">AI Chat</a>
+            <a href="/settings" class="nav-link">Settings</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Page Header -->
+        <header class="page-header">
+            <h1 class="page-title">Dashboard</h1>
+            <p class="page-subtitle">Home overview and quick controls</p>
+        </header>
+
+        <!-- Stats Grid -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Devices Online</div>
+                <div class="stat-value success" id="devicesOnline">12</div>
+                <div class="stat-trend up">↑ 2 from yesterday</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Energy Today</div>
+                <div class="stat-value" id="energyUsage">24.5</div>
+                <div class="stat-trend down">↓ 8% vs average</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Rooms</div>
+                <div class="stat-value" id="activeRooms">4</div>
+                <div class="stat-trend">of 6 total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">AI Queries</div>
+                <div class="stat-value" id="aiQueries">47</div>
+                <div class="stat-trend up">↑ Active today</div>
+            </div>
+        </section>
+
+        <!-- Devices Section -->
+        <section>
+            <div class="section-header">
+                <h2 class="section-title">⚡ Active Devices</h2>
+            </div>
+            <div class="device-grid" id="deviceGrid">
+                <!-- Devices loaded dynamically -->
+            </div>
+        </section>
+
+        <!-- Activity Feed -->
+        <section class="activity-section">
+            <div class="activity-header">📋 Recent Activity</div>
+            <div class="activity-list" id="activityList">
+                <!-- Activity items loaded dynamically -->
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section>
+            <div class="section-header">
+                <h2 class="section-title">🚀 Quick Actions</h2>
+            </div>
+            <div class="quick-actions">
+                <button class="action-btn" onclick="triggerScene('away')">
+                    <span class="action-icon">🚪</span>
+                    <span class="action-label">Away Mode</span>
+                </button>
+                <button class="action-btn" onclick="triggerScene('night')">
+                    <span class="action-icon">🌙</span>
+                    <span class="action-label">Night Mode</span>
+                </button>
+                <a href="/chat" class="action-btn">
+                    <span class="action-icon">💬</span>
+                    <span class="action-label">AI Chat</span>
+                </a>
+                <a href="/settings" class="action-btn">
+                    <span class="action-icon">⚙️</span>
+                    <span class="action-label">Settings</span>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Sample device data
+        const sampleDevices = [
+            { id: 1, name: 'Living Room Lights', room: 'Living Room', icon: '💡', type: 'light', state: true, online: true },
+            { id: 2, name: 'Smart Thermostat', room: 'Hallway', icon: '🌡️', type: 'climate', state: true, online: true },
+            { id: 3, name: 'Kitchen Lights', room: 'Kitchen', icon: '💡', type: 'light', state: false, online: true },
+            { id: 4, name: 'Security Camera', room: 'Entrance', icon: '📷', type: 'camera', state: true, online: true },
+            { id: 5, name: 'Smart Lock', room: 'Front Door', icon: '🔐', type: 'lock', state: true, online: true },
+            { id: 6, name: 'Bedroom Speaker', room: 'Bedroom 1', icon: '🔊', type: 'media', state: false, online: false },
+        ];
+
+        const sampleActivity = [
+            { icon: '💡', text: 'Living Room Lights turned on by Alex', time: '2 min ago' },
+            { icon: '🔐', text: 'Front Door unlocked', time: '15 min ago' },
+            { icon: '🤖', text: 'AI: Temperature adjusted to 72°F', time: '1 hour ago' },
+            { icon: '📷', text: 'Motion detected at entrance', time: '2 hours ago' },
+            { icon: '💬', text: 'Guest requested WiFi access', time: '3 hours ago' },
+        ];
+
+        // Render devices
+        function renderDevices() {
+            const grid = document.getElementById('deviceGrid');
+            grid.innerHTML = sampleDevices.map(device => `
+                <div class="device-card ${device.state ? 'active' : ''}" data-id="${device.id}">
+                    <div class="device-header">
+                        <div class="device-info">
+                            <div class="device-icon">${device.icon}</div>
+                            <div>
+                                <div class="device-name">${device.name}</div>
+                                <div class="device-room">${device.room}</div>
+                            </div>
+                        </div>
+                        <div class="device-toggle ${device.state ? 'on' : ''}" 
+                             onclick="toggleDevice(${device.id})"></div>
+                    </div>
+                    <div class="device-body">
+                        <div class="device-status">
+                            <span class="device-status-dot ${device.online ? 'online' : 'offline'}"></span>
+                            ${device.online ? 'Online' : 'Offline'}
+                        </div>
+                        <div class="device-controls">
+                            <button class="device-btn" onclick="showDeviceDetails(${device.id})">Details</button>
+                            <button class="device-btn" onclick="configureDevice(${device.id})">Configure</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render activity
+        function renderActivity() {
+            const list = document.getElementById('activityList');
+            list.innerHTML = sampleActivity.map(item => `
+                <div class="activity-item">
+                    <div class="activity-icon">${item.icon}</div>
+                    <div class="activity-content">
+                        <div class="activity-text">${item.text}</div>
+                        <div class="activity-time">${item.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Toggle device
+        function toggleDevice(id) {
+            const device = sampleDevices.find(d => d.id === id);
+            if (device) {
+                device.state = !device.state;
+                renderDevices();
+                
+                // Haptic feedback
+                if (navigator.vibrate) navigator.vibrate(10);
+            }
+        }
+
+        // Scene triggers
+        function triggerScene(scene) {
+            console.log('Triggering scene:', scene);
+            // API call would go here
+            if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+        }
+
+        function showDeviceDetails(id) {
+            console.log('Show details for device:', id);
+        }
+
+        function configureDevice(id) {
+            console.log('Configure device:', id);
+        }
+
+        // Initialize
+        renderDevices();
+        renderActivity();
+    </script>
+    <!-- Theme Manager (P5) -->
+    <script src="/static/js/theme-manager.js"></script>
+</body>
+</html>

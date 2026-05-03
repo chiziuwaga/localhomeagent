@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        #animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 black;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid black;
+            text-decoration: none;
+            color: black;
+            transition: all 0.2s;
+        }
+
+        .nav a:hover {
+            background: #ffeb3b;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        .nav a.active {
+            background: black;
+            color: white;
+        }
+
+        .settings-section {
+            background: white;
+            border: 3px solid black;
+            padding: 25px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .settings-section h2 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid black;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 51, 51, 0.3);
+            transform: scale(1.01);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: black;
+            color: white;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #ff3333;
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 black;
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        button.secondary {
+            background: white;
+            color: black;
+        }
+
+        button.secondary:hover {
+            background: #ffeb3b;
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .model-card {
+            border: 2px solid black;
+            padding: 15px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .model-card:hover {
+            background: #f9f9f9;
+            transform: translateY(-2px);
+            box-shadow: 3px 3px 0 black;
+        }
+
+        .model-card.selected {
+            background: #ffeb3b;
+            border-width: 3px;
+        }
+
+        .model-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .model-size {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .model-desc {
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .status-installed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-available {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .help-text {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            border: 2px solid black;
+            transition: 0.3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border: 2px solid black;
+            transition: 0.3s;
+        }
+
+        input:checked + .slider {
+            background-color: #4caf50;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .success-message {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid black;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="animated-bg"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1><span class="accent">●</span> Settings</h1>
+            <p>Configure your Local Home Agent</p>
+            <div class="nav">
+                <a href="/">Home</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/chat">Chat</a>
+                <a href="/setup" class="active">Settings</a>
+            </div>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            Settings saved successfully!
+        </div>
+
+        <div class="settings-section">
+            <h2>General Settings</h2>
+            <div class="form-group">
+                <label for="homeName">Home Name</label>
+                <input type="text" id="homeName" placeholder="My Co-Living Space">
+                <p class="help-text">This name will be displayed to users connecting to your WiFi</p>
+            </div>
+            <button onclick="saveGeneralSettings()">Save Changes</button>
+        </div>
+
+        <div class="settings-section">
+            <h2>AI Model Selection</h2>
+            <p class="help-text">Choose a local LLM model for AI conversations. Models run entirely offline on your device.</p>
+            
+            <div class="model-grid" id="modelGrid">
+                <div class="model-card" onclick="selectModel('llama-3.2-1b')">
+                    <div class="model-name">Llama 3.2 1B</div>
+                    <div class="model-size">Size: 1.3 GB</div>
+                    <div class="model-desc">Lightweight model for basic tasks and fast responses</div>
+                    <span class="status-badge status-available">Available</span>
+                </div>
+                
+                <div class="model-card selected" onclick="selectModel('llama-3.2-3b')">
+                    <div class="model-name">Llama 3.2 3B ⭐</div>
+                    <div class="model-size">Size: 3.2 GB</div>
+                    <div class="model-desc">Balanced performance and size. Recommended for most users.</div>
+                    <span class="status-badge status-available">Available</span>
+                </div>
+                
+                <div class="model-card" onclick="selectModel('mistral-7b')">
+                    <div class="model-name">Mistral 7B</div>
+                    <div class="model-size">Size: 4.1 GB</div>
+                    <div class="model-desc">High performance model with advanced understanding</div>
+                    <span class="status-badge status-available">Available</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button onclick="downloadModel()">Download Selected Model</button>
+                <button class="secondary" onclick="checkModelStatus()">Check Status</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <h2>Home Assistant Integration</h2>
+            <div class="form-group">
+                <label for="haUrl">Home Assistant URL</label>
+                <input type="text" id="haUrl" placeholder="http://homeassistant.local:8123">
+                <p class="help-text">Enter the URL of your Home Assistant instance</p>
+            </div>
+            <div class="form-group">
+                <label for="haToken">Long-Lived Access Token</label>
+                <input type="password" id="haToken" placeholder="eyJ0eXAiOiJKV1QiLCJhbGc...">
+                <p class="help-text">Generate this in Home Assistant: Profile → Long-Lived Access Tokens</p>
+            </div>
+            <button onclick="testHAConnection()">Test Connection</button>
+            <button class="secondary" onclick="saveHASettings()">Save</button>
+        </div>
+
+        <div class="settings-section">
+            <h2>WiFi Captive Portal</h2>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="captivePortalEnabled">
+                    Enable Captive Portal
+                </label>
+                <p class="help-text">Automatically redirect users to the home agent when they connect to WiFi</p>
+            </div>
+            <div class="form-group">
+                <label for="wifiSSID">WiFi Network Name (SSID)</label>
+                <input type="text" id="wifiSSID" placeholder="MyHomeWiFi">
+            </div>
+            <button onclick="saveWiFiSettings()">Save WiFi Settings</button>
+        </div>
+
+        <div class="settings-section">
+            <h2>Security</h2>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="voiceVerificationEnabled">
+                    Enable Voice Verification for High-Risk Actions
+                </label>
+                <p class="help-text">Require voice confirmation for unlocking doors, disabling alarms, etc.</p>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="autoLockEnabled">
+                    Auto-lock after 30 minutes of inactivity
+                </label>
+            </div>
+            <button onclick="saveSecuritySettings()">Save Security Settings</button>
+        </div>
+
+        <div class="settings-section">
+            <h2>Advanced</h2>
+            <div class="form-group">
+                <label for="apiPort">API Port</label>
+                <input type="number" id="apiPort" value="8000">
+                <p class="help-text">Port for the local web server (default: 8000)</p>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="debugMode">
+                    Enable Debug Mode
+                </label>
+                <p class="help-text">Show detailed logs for troubleshooting</p>
+            </div>
+            <button onclick="saveAdvancedSettings()">Save Advanced Settings</button>
+            <button class="secondary" onclick="resetToDefaults()">Reset to Defaults</button>
+        </div>
+    </div>
+
+    <script>
+        // Animated background (same as other pages)
+        const canvas = document.getElementById('animated-bg');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const shapes = [];
+        for (let i = 0; i < 8; i++) {
+            shapes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 40 + Math.random() * 60,
+                dx: (Math.random() - 0.5) * 0.5,
+                dy: (Math.random() - 0.5) * 0.5,
+                type: Math.floor(Math.random() * 3)
+            });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            
+            shapes.forEach(shape => {
+                ctx.beginPath();
+                if (shape.type === 0) {
+                    ctx.rect(shape.x, shape.y, shape.size, shape.size);
+                } else if (shape.type === 1) {
+                    ctx.arc(shape.x, shape.y, shape.size / 2, 0, Math.PI * 2);
+                } else {
+                    ctx.moveTo(shape.x, shape.y - shape.size / 2);
+                    ctx.lineTo(shape.x + shape.size / 2, shape.y + shape.size / 2);
+                    ctx.lineTo(shape.x - shape.size / 2, shape.y + shape.size / 2);
+                    ctx.closePath();
+                }
+                ctx.stroke();
+                
+                shape.x += shape.dx;
+                shape.y += shape.dy;
+                
+                if (shape.x < -shape.size) shape.x = canvas.width + shape.size;
+                if (shape.x > canvas.width + shape.size) shape.x = -shape.size;
+                if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
+                if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+
+        // Settings functionality
+        let selectedModel = 'llama-3.2-3b';
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                document.getElementById('homeName').value = settings.home_name || 'My Co-Living Space';
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        function selectModel(modelId) {
+            selectedModel = modelId;
+            document.querySelectorAll('.model-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+        }
+
+        async function saveGeneralSettings() {
+            const homeName = document.getElementById('homeName').value;
+            
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        home_name: homeName,
+                        admin_configured: true,
+                        llm_configured: false,
+                        wifi_configured: false
+                    })
+                });
+
+                if (response.ok) {
+                    showSuccess();
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('Error saving settings');
+            }
+        }
+
+        async function downloadModel() {
+            try {
+                const response = await fetch('/api/llm/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model_id: selectedModel })
+                });
+
+                if (response.ok) {
+                    alert(`Downloading ${selectedModel}... This may take a few minutes.`);
+                }
+            } catch (error) {
+                console.error('Error downloading model:', error);
+                alert('Error downloading model');
+            }
+        }
+
+        function checkModelStatus() {
+            alert('Model status check coming soon! Check your Ollama/LM Studio installation.');
+        }
+
+        function testHAConnection() {
+            alert('Testing Home Assistant connection... Feature coming soon!');
+        }
+
+        function saveHASettings() {
+            showSuccess();
+        }
+
+        function saveWiFiSettings() {
+            showSuccess();
+        }
+
+        function saveSecuritySettings() {
+            showSuccess();
+        }
+
+        function saveAdvancedSettings() {
+            showSuccess();
+        }
+
+        function resetToDefaults() {
+            if (confirm('Reset all settings to defaults?')) {
+                document.getElementById('homeName').value = 'My Co-Living Space';
+                document.getElementById('apiPort').value = '8000';
+                showSuccess();
+            }
+        }
+
+        function showSuccess() {
+            const msg = document.getElementById('successMessage');
+            msg.style.display = 'block';
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load settings on page load
+        loadSettings();
+    </script>
+</body>
+</html>

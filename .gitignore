@@ -1,25 +1,66 @@
-# Node
+# Node / site
 node_modules/
-dist/
 .vite/
 .cache/
+site/dist/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller / installers (build outputs only — keep installer.nsi & build.spec)
+dist/
+*.dmg
+*.exe.bak
+local-home-agent.exe
+LocalHomeAgent-Setup-*.exe
+LocalHomeAgent-*.dmg
+LocalHomeAgent-*.AppImage
+
+# Virtual environments
 .venv/
 venv/
+ENV/
 .uv/
-*.egg-info/
-.pytest_cache/
 
-# OS / editor
-.DS_Store
-Thumbs.db
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Env
+# Secrets and config
+config/queue_secret.key
+config/*.key
+*.pem
 .env
 .env.local
 .env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/

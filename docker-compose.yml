@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  local-home-agent:
+    build: .
+    container_name: local-home-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - PASSPHRASE=${PASSPHRASE}
+      - ADMIN_PIN=${ADMIN_PIN}
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    restart: unless-stopped
+    networks:
+      - home-network
+
+networks:
+  home-network:
+    driver: bridge

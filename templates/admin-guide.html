@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff3333">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/templates/manifest.json">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <title>Admin Setup Guide - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-primary, #000000);
+            color: var(--text-primary, #ffffff);
+            min-height: 100vh;
+        }
+
+        /* Grid overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Navigation - Dark Mode */
+        nav {
+            background: var(--bg-secondary, #111111);
+            border-bottom: 4px solid var(--border-color, #ffffff);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav h1 {
+            font-size: 1.5rem;
+            color: var(--text-primary, #ffffff);
+        }
+
+        .accent { color: var(--accent, #ff3333); }
+
+        nav a {
+            color: var(--text-primary, #ffffff);
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 2px solid var(--border-color, #ffffff);
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: var(--accent, #ff3333);
+            color: #000000;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--bg-secondary, #111111);
+            border: 4px solid var(--border-color, #ffffff);
+            box-shadow: 8px 8px 0 var(--accent, #ff3333);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card h2 {
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border-color, #ffffff);
+            color: var(--text-primary, #ffffff);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card h3 {
+            color: var(--accent, #ff3333);
+            margin-bottom: 12px;
+            margin-top: 20px;
+        }
+
+        .card h3:first-of-type {
+            margin-top: 0;
+        }
+
+        .card p, .card li {
+            color: var(--text-primary, #ffffff);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .card ol, .card ul {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: var(--accent, #ff3333);
+            color: #000000;
+            font-weight: bold;
+            margin-right: 12px;
+        }
+
+        .info-box {
+            background: var(--bg-tertiary, #1a1a1a);
+            border: 2px solid var(--border-color, #ffffff);
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .info-box.warning {
+            border-color: #ff9900;
+            background: #1a1500;
+        }
+
+        .info-box.success {
+            border-color: #00ff00;
+            background: #001a00;
+        }
+
+        .info-box-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--accent, #ff3333);
+        }
+
+        .info-box.warning .info-box-title {
+            color: #ff9900;
+        }
+
+        .info-box.success .info-box-title {
+            color: #00ff00;
+        }
+
+        code {
+            background: #000000;
+            color: #00ff00;
+            padding: 2px 8px;
+            border: 1px solid var(--border-color, #333333);
+            font-family: 'Courier New', monospace;
+        }
+
+        pre {
+            background: #000000;
+            color: #00ff00;
+            padding: 16px;
+            border: 2px solid var(--border-color, #ffffff);
+            overflow-x: auto;
+            margin: 16px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .qr-container {
+            text-align: center;
+            padding: 24px;
+            background: #ffffff;
+            border: 4px solid var(--border-color, #ffffff);
+            margin: 16px 0;
+        }
+
+        .qr-container canvas {
+            max-width: 200px;
+        }
+
+        .qr-container p {
+            color: #000000;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--accent, #ff3333);
+            color: #000000;
+            border: 4px solid var(--border-color, #ffffff);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            margin-right: 12px;
+            margin-bottom: 12px;
+        }
+
+        .button:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .button-secondary {
+            background: var(--bg-secondary, #111111);
+            color: var(--text-primary, #ffffff);
+        }
+
+        .checklist {
+            list-style: none;
+            margin-left: 0 !important;
+        }
+
+        .checklist li {
+            padding: 12px;
+            border: 2px solid var(--border-color, #ffffff);
+            background: var(--bg-tertiary, #1a1a1a);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .checklist li::before {
+            content: '☐';
+            font-size: 1.5rem;
+        }
+
+        .checklist li.done::before {
+            content: '✓';
+            color: #00ff00;
+        }
+
+        .network-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .network-stat {
+            background: var(--bg-tertiary, #1a1a1a);
+            border: 2px solid var(--border-color, #ffffff);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .network-stat .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent, #ff3333);
+        }
+
+        .network-stat .label {
+            color: var(--text-secondary, #888888);
+            font-size: 0.85rem;
+            margin-top: 4px;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 767px) {
+            .container {
+                padding: 16px;
+            }
+
+            .card {
+                padding: 16px;
+                box-shadow: 4px 4px 0 var(--accent, #ff3333);
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <h1>📖 <span class="accent">ADMIN GUIDE</span></h1>
+        <a href="/settings">← BACK TO SETTINGS</a>
+    </nav>
+
+    <div class="container">
+        <!-- Overview Card -->
+        <div class="card">
+            <h2>🏠 WiFi Network Setup for Co-Living</h2>
+            <p>This guide explains how to configure the Local Home Agent so that all residents can access it via their devices on your home WiFi network.</p>
+            
+            <div class="info-box success">
+                <div class="info-box-title">✓ How It Works</div>
+                <p>The Local Home Agent runs on your Windows computer and serves a web interface on your local network. Any device connected to the same WiFi can access the dashboard, chat with the AI, and control smart home devices.</p>
+            </div>
+        </div>
+
+        <!-- Prerequisites -->
+        <div class="card">
+            <h2>📋 Prerequisites Checklist</h2>
+            <ul class="checklist" id="checklist">
+                <li onclick="toggleCheck(this)">Windows 10/11 computer that will host the agent</li>
+                <li onclick="toggleCheck(this)">Computer connected to your home WiFi</li>
+                <li onclick="toggleCheck(this)">Administrator access on the computer</li>
+                <li onclick="toggleCheck(this)">Know your WiFi network name (SSID)</li>
+                <li onclick="toggleCheck(this)">All residents' devices connected to the same WiFi</li>
+            </ul>
+        </div>
+
+        <!-- Step 1: Network Configuration -->
+        <div class="card">
+            <h2><span class="step-number">1</span> Find Your Local IP Address</h2>
+            <p>First, you need to find the IP address of the computer running the Local Home Agent. This is the address other devices will use to connect.</p>
+            
+            <h3>Option A: Using Command Prompt</h3>
+            <ol>
+                <li>Press <code>Win + R</code>, type <code>cmd</code>, press Enter</li>
+                <li>Type <code>ipconfig</code> and press Enter</li>
+                <li>Look for "IPv4 Address" under your WiFi adapter</li>
+                <li>It will look like: <code>192.168.1.xxx</code> or <code>10.0.0.xxx</code></li>
+            </ol>
+
+            <pre>C:\> ipconfig
+
+Wireless LAN adapter WiFi:
+   IPv4 Address. . . . . . . . . . . : 192.168.1.42  ← YOUR IP
+   Subnet Mask . . . . . . . . . . . : 255.255.255.0
+   Default Gateway . . . . . . . . . : 192.168.1.1</pre>
+
+            <h3>Your Network Info</h3>
+            <div class="network-info">
+                <div class="network-stat">
+                    <div class="value" id="local-ip">Loading...</div>
+                    <div class="label">LOCAL IP</div>
+                </div>
+                <div class="network-stat">
+                    <div class="value" id="port">8000</div>
+                    <div class="label">PORT</div>
+                </div>
+                <div class="network-stat">
+                    <div class="value" id="full-url">Loading...</div>
+                    <div class="label">FULL URL</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Firewall Configuration -->
+        <div class="card">
+            <h2><span class="step-number">2</span> Configure Windows Firewall</h2>
+            <p>Windows Firewall may block incoming connections. You need to allow the Local Home Agent through the firewall.</p>
+
+            <div class="info-box warning">
+                <div class="info-box-title">⚠️ Security Note</div>
+                <p>Only allow connections on your private (home) network. Never expose this to public networks.</p>
+            </div>
+
+            <h3>Allow Through Firewall</h3>
+            <ol>
+                <li>Open <strong>Windows Security</strong> (search in Start menu)</li>
+                <li>Go to <strong>Firewall & network protection</strong></li>
+                <li>Click <strong>Allow an app through firewall</strong></li>
+                <li>Click <strong>Change settings</strong> (requires admin)</li>
+                <li>Click <strong>Allow another app...</strong></li>
+                <li>Browse to <code>LocalHomeAgent.exe</code> and add it</li>
+                <li>Check <strong>Private</strong> network only</li>
+            </ol>
+
+            <h3>Alternative: PowerShell Command</h3>
+            <p>Run PowerShell as Administrator and execute:</p>
+            <pre>New-NetFirewallRule -DisplayName "Local Home Agent" `
+    -Direction Inbound -Protocol TCP -LocalPort 8000 `
+    -Action Allow -Profile Private</pre>
+        </div>
+
+        <!-- Step 3: Share Access -->
+        <div class="card">
+            <h2><span class="step-number">3</span> Share Access with Residents</h2>
+            <p>Once configured, residents can access the Local Home Agent from any device on the WiFi network.</p>
+
+            <h3>Access URL</h3>
+            <div class="info-box success">
+                <div class="info-box-title">📱 Access from any device:</div>
+                <p style="font-size: 1.5rem; font-family: monospace;" id="access-url">http://192.168.1.42:8000</p>
+            </div>
+
+            <h3>QR Code for Easy Access</h3>
+            <p>Scan this QR code with a smartphone to open the Local Home Agent:</p>
+            <div class="qr-container">
+                <canvas id="qr-code"></canvas>
+                <p>Scan to access Home Agent</p>
+            </div>
+            <button class="button" onclick="printQRCode()">🖨️ PRINT QR CODE</button>
+            <button class="button button-secondary" onclick="copyURL()">📋 COPY URL</button>
+
+            <h3>Add to Home Screen (PWA)</h3>
+            <p>For the best experience, residents can add the Local Home Agent to their phone's home screen:</p>
+            <ol>
+                <li><strong>iOS Safari:</strong> Tap Share → Add to Home Screen</li>
+                <li><strong>Android Chrome:</strong> Tap Menu (⋮) → Add to Home Screen</li>
+                <li>The app will work offline and feel like a native app!</li>
+            </ol>
+        </div>
+
+        <!-- Step 4: User Management -->
+        <div class="card">
+            <h2><span class="step-number">4</span> Add Residents as Users</h2>
+            <p>Each resident should be added as a user with appropriate permissions.</p>
+
+            <h3>User Roles</h3>
+            <ul>
+                <li><strong>Admin:</strong> Full control - manage users, settings, all devices</li>
+                <li><strong>Resident:</strong> Control allowed devices, view status, chat with AI</li>
+                <li><strong>Guest:</strong> Limited access - view only, basic controls</li>
+            </ul>
+
+            <a href="/settings#users" class="button">👥 MANAGE USERS</a>
+        </div>
+
+        <!-- Step 5: Security Best Practices -->
+        <div class="card">
+            <h2><span class="step-number">5</span> Security Best Practices</h2>
+            
+            <h3>Recommended Settings</h3>
+            <ul>
+                <li>✓ Set a strong admin PIN for high-risk actions (unlocking doors, etc.)</li>
+                <li>✓ Enable action verification for security-sensitive operations</li>
+                <li>✓ Keep the host computer updated with Windows security patches</li>
+                <li>✓ Use a strong WiFi password (WPA3 preferred)</li>
+                <li>✓ Regularly review the audit log for unusual activity</li>
+            </ul>
+
+            <div class="info-box warning">
+                <div class="info-box-title">⚠️ Important</div>
+                <p>Never share the access URL publicly. Keep it within your home network only. The Local Home Agent should only be accessible on your private WiFi.</p>
+            </div>
+
+            <a href="/settings#security" class="button">🔐 SECURITY SETTINGS</a>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="card">
+            <h2>🔧 Troubleshooting</h2>
+            
+            <h3>Can't connect from other devices?</h3>
+            <ol>
+                <li>Verify both devices are on the same WiFi network</li>
+                <li>Check Windows Firewall is allowing the connection</li>
+                <li>Try temporarily disabling firewall to test (re-enable after!)</li>
+                <li>Make sure the host computer isn't in sleep mode</li>
+                <li>Verify the Local Home Agent is running</li>
+            </ol>
+
+            <h3>Connection is slow?</h3>
+            <ol>
+                <li>Check WiFi signal strength on both devices</li>
+                <li>Move closer to the router</li>
+                <li>Consider a WiFi extender for larger homes</li>
+            </ol>
+
+            <h3>Still having issues?</h3>
+            <a href="/chat" class="button">💬 ASK THE AI FOR HELP</a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/qrcode.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script>
+        // Token expiry tracking
+        let tokenExpiryMinutes = 60;
+        let tokenRefreshInterval;
+        
+        // Get local IP from API with dynamic security token
+        async function loadNetworkInfo() {
+            try {
+                const response = await fetch('/api/network/info');
+                const data = await response.json();
+                
+                const localIp = data.local_ip || window.location.hostname;
+                const port = data.port || 8000;
+                // Use the secure QR URL with token
+                const secureUrl = data.qr_url || `http://${localIp}:${port}`;
+                const displayUrl = `http://${localIp}:${port}`;
+                
+                document.getElementById('local-ip').textContent = localIp;
+                document.getElementById('full-url').textContent = displayUrl;
+                document.getElementById('access-url').textContent = displayUrl;
+                
+                // Update token expiry display
+                tokenExpiryMinutes = data.token_expires_in || 60;
+                updateTokenExpiryDisplay();
+                
+                // Generate QR code with secure token URL
+                QRCode.generate(document.getElementById('qr-code'), secureUrl, {
+                    size: 200,
+                    darkColor: '#000000',
+                    lightColor: '#ffffff'
+                });
+                
+                // Add security badge
+                showSecurityBadge(data.access_token);
+                
+                // Setup auto-refresh before token expires
+                setupTokenRefresh();
+            } catch (e) {
+                // Fallback to current URL (less secure)
+                const url = `${window.location.protocol}//${window.location.host}`;
+                document.getElementById('local-ip').textContent = window.location.hostname;
+                document.getElementById('full-url').textContent = url;
+                document.getElementById('access-url').textContent = url;
+                
+                QRCode.generate(document.getElementById('qr-code'), url, {
+                    size: 200,
+                    darkColor: '#000000',
+                    lightColor: '#ffffff'
+                });
+            }
+        }
+        
+        // Show security badge
+        function showSecurityBadge(token) {
+            const qrContainer = document.getElementById('qr-code').parentElement;
+            let badge = document.getElementById('security-badge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'security-badge';
+                badge.style.cssText = 'margin-top: 12px; padding: 8px 12px; background: var(--color-success, #00cc00); color: #000; font-size: 0.875rem; border: 2px solid var(--color-border-strong, #fff);';
+                qrContainer.appendChild(badge);
+            }
+            badge.innerHTML = `🔒 Secure Token: <code style="background:#000;color:#0f0;padding:2px 6px;">${token.substring(0, 8)}...</code>`;
+        }
+        
+        // Update token expiry display
+        function updateTokenExpiryDisplay() {
+            let expiryEl = document.getElementById('token-expiry');
+            if (!expiryEl) {
+                const qrContainer = document.getElementById('qr-code').parentElement;
+                expiryEl = document.createElement('div');
+                expiryEl.id = 'token-expiry';
+                expiryEl.style.cssText = 'margin-top: 8px; font-size: 0.875rem; color: var(--color-text-muted, #888);';
+                qrContainer.appendChild(expiryEl);
+            }
+            expiryEl.textContent = `⏱️ Token expires in ${tokenExpiryMinutes} minutes`;
+        }
+        
+        // Setup auto-refresh for token
+        function setupTokenRefresh() {
+            if (tokenRefreshInterval) clearInterval(tokenRefreshInterval);
+            
+            // Update display every minute
+            tokenRefreshInterval = setInterval(() => {
+                tokenExpiryMinutes--;
+                updateTokenExpiryDisplay();
+                
+                // Refresh 5 minutes before expiry
+                if (tokenExpiryMinutes <= 5) {
+                    loadNetworkInfo();
+                }
+            }, 60000);
+        }
+
+        // Toggle checklist item
+        function toggleCheck(element) {
+            element.classList.toggle('done');
+        }
+
+        // Copy URL to clipboard
+        function copyURL() {
+            const url = document.getElementById('access-url').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        // Print QR code
+        function printQRCode() {
+            const canvas = document.getElementById('qr-code');
+            const url = document.getElementById('access-url').textContent;
+            
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Local Home Agent - Access QR Code</title>
+                    <style>
+                        body { 
+                            font-family: 'Courier New', monospace; 
+                            text-align: center; 
+                            padding: 40px;
+                        }
+                        h1 { margin-bottom: 20px; }
+                        .url { 
+                            font-size: 1.2rem; 
+                            background: #f0f0f0; 
+                            padding: 16px; 
+                            margin: 20px 0;
+                            border: 2px solid black;
+                        }
+                        img { border: 4px solid black; }
+                    </style>
+                </head>
+                <body>
+                    <h1>🏠 Local Home Agent</h1>
+                    <p>Scan this QR code to access the Home Agent:</p>
+                    <img src="${canvas.toDataURL()}" width="200" height="200">
+                    <div class="url">${url}</div>
+                    <p>Make sure you're connected to the home WiFi!</p>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Initialize
+        loadNetworkInfo();
+    </script>
+
+    <script src="/static/js/pwa.js"></script>
+    <!-- Theme Manager (P5) -->
+    <script src="/static/js/theme-manager.js"></script>
+</body>
+</html>

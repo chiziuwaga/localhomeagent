@@ -1,0 +1,104 @@
+# Local Home Agent - Portable Configuration
+# DW1.13: Portable version (USB-runnable, no install required)
+#
+# This file enables portable mode when present in the app directory.
+# All data will be stored relative to the application folder.
+
+portable: true
+
+# ============================================================================
+# PORTABLE PATHS
+# ============================================================================
+
+# All paths are relative to the application directory
+paths:
+  data: ./data              # Database and persistent storage
+  config: ./config          # Configuration files
+  logs: ./logs              # Log files
+  cache: ./cache            # Temporary cache
+  models: ./models          # Downloaded AI models (if using bundled Ollama)
+
+# ============================================================================
+# PORTABLE FEATURES
+# ============================================================================
+
+features:
+  # Use SQLite instead of PostgreSQL for portability
+  database: sqlite
+  sqlite_path: ./data/localhome.db
+  
+  # Disable features that require system integration
+  autostart: false
+  system_tray: false
+  
+  # Enable offline-first mode
+  offline_first: true
+  
+  # Bundle a small model for USB deployment
+  bundled_model: phi3:mini
+
+# ============================================================================
+# USB DEPLOYMENT
+# ============================================================================
+
+usb_deploy:
+  # Minimum USB drive requirements
+  min_space_gb: 8
+  
+  # Files to include in portable package
+  include:
+    - app/**
+    - config/**
+    - static/**
+    - templates/**
+    - README.md
+    - LICENSE
+    - portable.yaml
+  
+  # Files to exclude
+  exclude:
+    - "*.pyc"
+    - "__pycache__"
+    - ".git"
+    - "*.log"
+
+# ============================================================================
+# FIRST-RUN DETECTION
+# ============================================================================
+
+# When this file exists but ./data folder doesn't, run first-time setup
+first_run:
+  create_folders: true
+  copy_example_config: true
+  show_setup_wizard: true
+
+# ============================================================================
+# NETWORK CONFIGURATION (for portable use on different networks)
+# ============================================================================
+
+network:
+  # Auto-detect local network on each start
+  auto_detect: true
+  
+  # Fallback port if 8000 is busy
+  fallback_ports: [8001, 8080, 8888]
+  
+  # Disable mDNS advertising (might conflict on unfamiliar networks)
+  mdns_advertise: false
+
+# ============================================================================
+# SECURITY (portable mode considerations)
+# ============================================================================
+
+security:
+  # Require PIN on each start (extra security for portable devices)
+  require_pin_on_start: true
+  
+  # Auto-lock after inactivity
+  auto_lock_minutes: 15
+  
+  # Encrypt local database
+  encrypt_database: true
+  
+  # Clear sensitive data on exit
+  clear_session_on_exit: true

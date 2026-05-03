@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff3333">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Welcome to your co-living space - Please wait for room assignment">
+    <link rel="manifest" href="/templates/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <title>Waiting Room - {{ home_name }}</title>
+    <style>
+        /* ============================================================
+           Neo-Brutalist + Swiss Design System
+           P5: UX Polish with Micro-Interactions
+           ============================================================ */
+
+        :root {
+            /* Core Colors */
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #141414;
+            --bg-card: #1a1a1a;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            
+            --accent-primary: #ff3333;
+            --accent-secondary: #ff6b6b;
+            --accent-glow: rgba(255, 51, 51, 0.3);
+            
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff3333;
+            --info: #00aaff;
+            
+            --border-color: #ffffff;
+            --border-subtle: #333333;
+            
+            /* Typography - Swiss Grid */
+            --font-mono: 'Courier New', 'SF Mono', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            
+            /* Spacing - 8px Grid */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-xxl: 48px;
+            
+            /* Shadows - Brutalist Offset */
+            --shadow-sm: 4px 4px 0 var(--accent-primary);
+            --shadow-md: 8px 8px 0 var(--accent-primary);
+            --shadow-lg: 12px 12px 0 var(--accent-primary);
+            
+            /* Transitions */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-lg);
+            padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+            overflow-x: hidden;
+        }
+
+        /* Grid overlay for Swiss aesthetic */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ============================================================
+           WAITING ROOM CONTAINER
+           ============================================================ */
+
+        .waiting-container {
+            max-width: 480px;
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 4px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            padding: var(--space-xl);
+            position: relative;
+            animation: containerEnter 0.6s var(--transition-spring) forwards;
+        }
+
+        @keyframes containerEnter {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Top accent bar */
+        .waiting-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                var(--accent-primary) 0%, 
+                var(--accent-secondary) 50%, 
+                var(--accent-primary) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .home-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+        }
+
+        .home-name .dot {
+            width: 12px;
+            height: 12px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 var(--accent-glow);
+            }
+            50% { 
+                opacity: 0.7; 
+                transform: scale(1.1);
+                box-shadow: 0 0 20px 10px transparent;
+            }
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ============================================================
+           WAITING STATUS
+           ============================================================ */
+
+        .status-section {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+            text-align: center;
+        }
+
+        .waiting-animation {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--space-lg);
+            position: relative;
+        }
+
+        /* Concentric circles animation */
+        .waiting-animation .ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 2px solid var(--accent-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: ringExpand 2s infinite ease-out;
+        }
+
+        .waiting-animation .ring:nth-child(1) { animation-delay: 0s; }
+        .waiting-animation .ring:nth-child(2) { animation-delay: 0.5s; }
+        .waiting-animation .ring:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes ringExpand {
+            0% {
+                width: 20px;
+                height: 20px;
+                opacity: 1;
+            }
+            100% {
+                width: 80px;
+                height: 80px;
+                opacity: 0;
+            }
+        }
+
+        .waiting-animation .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+
+        .status-subtext {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        /* Queue position */
+        .queue-position {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-md);
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .queue-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .queue-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        /* ============================================================
+           USER INFO FORM
+           ============================================================ */
+
+        .form-section {
+            margin-bottom: var(--space-lg);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-md);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            transition: var(--transition-fast);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Float label animation */
+        .form-group.has-value .form-label,
+        .form-group.focused .form-label {
+            color: var(--accent-primary);
+        }
+
+        /* ============================================================
+           PURPOSE SELECTION (Radio Cards)
+           ============================================================ */
+
+        .purpose-section {
+            margin-bottom: var(--space-lg);
+        }
+
+        .purpose-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-md);
+        }
+
+        .purpose-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-sm);
+        }
+
+        .purpose-card {
+            position: relative;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            text-align: center;
+        }
+
+        .purpose-card:hover {
+            border-color: var(--text-secondary);
+            transform: translateY(-2px);
+        }
+
+        .purpose-card.selected {
+            border-color: var(--accent-primary);
+            background: var(--bg-card);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .purpose-card input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .purpose-icon {
+            font-size: 1.5rem;
+            margin-bottom: var(--space-xs);
+        }
+
+        .purpose-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .purpose-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: var(--space-xs);
+        }
+
+        /* ============================================================
+           BUTTON
+           ============================================================ */
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: var(--space-md);
+            background: var(--accent-primary);
+            color: #000000;
+            border: 4px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .btn:active {
+            transform: translate(6px, 6px);
+        }
+
+        .btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Ripple effect */
+        .btn .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* ============================================================
+           ESTIMATED WAIT TIME
+           ============================================================ */
+
+        .eta-section {
+            text-align: center;
+            margin-top: var(--space-lg);
+            padding-top: var(--space-lg);
+            border-top: 2px solid var(--border-subtle);
+        }
+
+        .eta-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .eta-time {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-sm);
+        }
+
+        .eta-time .clock {
+            animation: tick 1s steps(1) infinite;
+        }
+
+        @keyframes tick {
+            50% { opacity: 0.5; }
+        }
+
+        /* ============================================================
+           PROGRESS STEPS
+           ============================================================ */
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-top: var(--space-lg);
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-xs);
+            flex: 1;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border-subtle);
+            z-index: 0;
+        }
+
+        .step.completed:not(:last-child)::after {
+            background: var(--success);
+        }
+
+        .step-circle {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-subtle);
+            border-radius: 50%;
+            background: var(--bg-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            z-index: 1;
+        }
+
+        .step.completed .step-circle {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+        }
+
+        .step.current .step-circle {
+            border-color: var(--accent-primary);
+            animation: currentStep 1.5s infinite;
+        }
+
+        @keyframes currentStep {
+            0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+            50% { box-shadow: 0 0 0 8px transparent; }
+        }
+
+        .step-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .step.completed .step-label,
+        .step.current .step-label {
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           FOOTER
+           ============================================================ */
+
+        .footer {
+            margin-top: var(--space-lg);
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+
+        @media (max-width: 480px) {
+            .waiting-container {
+                padding: var(--space-lg);
+                box-shadow: var(--shadow-sm);
+            }
+
+            .home-name {
+                font-size: 1.25rem;
+            }
+
+            .purpose-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .queue-number {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Touch-specific */
+        @media (hover: none) {
+            .btn:hover {
+                transform: none;
+                box-shadow: var(--shadow-sm);
+            }
+
+            .btn:active {
+                transform: scale(0.98);
+            }
+
+            .purpose-card:hover {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="waiting-container" id="waitingContainer">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="home-name">
+                <span class="dot"></span>
+                {{ home_name }}
+            </h1>
+            <p class="subtitle">Guest WiFi Portal</p>
+        </div>
+
+        <!-- Status Section -->
+        <div class="status-section">
+            <div class="waiting-animation">
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="ring"></div>
+                <div class="center-dot"></div>
+            </div>
+            
+            <div class="status-text">Waiting for Room Assignment</div>
+            <div class="status-subtext">A resident will assign you to a room shortly</div>
+            
+            <div class="queue-position">
+                <div>
+                    <div class="queue-number" id="queueNumber">{{ queue_position }}</div>
+                    <div class="queue-label">Queue Position</div>
+                </div>
+                <div>
+                    <div class="queue-number" id="waitingCount">{{ waiting_count }}</div>
+                    <div class="queue-label">Others Waiting</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Info Form -->
+        <form id="guestForm" class="form-section">
+            <div class="form-group" id="nameGroup">
+                <label class="form-label" for="guestName">Your Name</label>
+                <input 
+                    type="text" 
+                    id="guestName" 
+                    name="name" 
+                    class="form-input" 
+                    placeholder="Enter your name"
+                    required
+                    autocomplete="name"
+                >
+            </div>
+
+            <!-- Purpose Selection -->
+            <div class="purpose-section">
+                <div class="purpose-title">I'm here as a...</div>
+                <div class="purpose-grid">
+                    <label class="purpose-card" data-purpose="guest">
+                        <input type="radio" name="purpose" value="guest" checked>
+                        <div class="purpose-icon">🏠</div>
+                        <div class="purpose-label">Guest</div>
+                        <div class="purpose-desc">Visiting a resident</div>
+                    </label>
+                    <label class="purpose-card" data-purpose="delivery">
+                        <input type="radio" name="purpose" value="delivery">
+                        <div class="purpose-icon">📦</div>
+                        <div class="purpose-label">Delivery</div>
+                        <div class="purpose-desc">Package or food</div>
+                    </label>
+                    <label class="purpose-card" data-purpose="service">
+                        <input type="radio" name="purpose" value="service">
+                        <div class="purpose-icon">🔧</div>
+                        <div class="purpose-label">Service</div>
+                        <div class="purpose-desc">Maintenance/repair</div>
+                    </label>
+                    <label class="purpose-card" data-purpose="tour">
+                        <input type="radio" name="purpose" value="tour">
+                        <div class="purpose-icon">👀</div>
+                        <div class="purpose-label">Tour</div>
+                        <div class="purpose-desc">Viewing the space</div>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn">
+                JOIN WAITING ROOM
+            </button>
+        </form>
+
+        <!-- ETA Section (shown after submission) -->
+        <div class="eta-section" id="etaSection" style="display: none;">
+            <div class="eta-label">Estimated Wait Time</div>
+            <div class="eta-time">
+                <span class="clock">⏱</span>
+                <span id="etaTime">~5 minutes</span>
+            </div>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="step completed" id="step1">
+                <div class="step-circle">✓</div>
+                <div class="step-label">Connected</div>
+            </div>
+            <div class="step current" id="step2">
+                <div class="step-circle">2</div>
+                <div class="step-label">Waiting</div>
+            </div>
+            <div class="step" id="step3">
+                <div class="step-circle">3</div>
+                <div class="step-label">Assigned</div>
+            </div>
+            <div class="step" id="step4">
+                <div class="step-circle">4</div>
+                <div class="step-label">Access</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Powered by <a href="https://fixitforme.ai">FixItForMe.ai</a></p>
+            <p>Local Home Agent v1.0.0</p>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // MICRO-INTERACTIONS
+        // ============================================================
+
+        // Purpose card selection
+        document.querySelectorAll('.purpose-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.purpose-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input').checked = true;
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(10);
+                }
+            });
+        });
+
+        // Initialize first card as selected
+        document.querySelector('.purpose-card[data-purpose="guest"]').classList.add('selected');
+
+        // Form input focus states
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.closest('.form-group').classList.add('focused');
+            });
+            input.addEventListener('blur', function() {
+                this.closest('.form-group').classList.remove('focused');
+                if (this.value) {
+                    this.closest('.form-group').classList.add('has-value');
+                } else {
+                    this.closest('.form-group').classList.remove('has-value');
+                }
+            });
+        });
+
+        // Button ripple effect
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+                ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+                
+                this.appendChild(ripple);
+                
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
+        });
+
+        // Form submission
+        document.getElementById('guestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const originalText = btn.textContent;
+            
+            // Show loading state
+            btn.disabled = true;
+            btn.textContent = 'JOINING...';
+            
+            // Haptic feedback
+            if (navigator.vibrate) {
+                navigator.vibrate([50, 50, 50]);
+            }
+            
+            try {
+                const formData = new FormData(this);
+                const data = {
+                    name: formData.get('name'),
+                    purpose: formData.get('purpose'),
+                    device_id: getDeviceId()
+                };
+                
+                const response = await fetch('/api/waiting-room/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // Update UI to waiting state
+                    document.querySelector('.status-text').textContent = 'You\'re in the queue!';
+                    document.querySelector('.status-subtext').textContent = 'Please wait while a resident assigns your access';
+                    
+                    // Show ETA
+                    document.getElementById('etaSection').style.display = 'block';
+                    document.getElementById('etaTime').textContent = result.estimated_wait || '~5 minutes';
+                    
+                    // Update step indicators
+                    document.getElementById('step2').classList.add('completed');
+                    document.getElementById('step2').classList.remove('current');
+                    document.getElementById('step2').querySelector('.step-circle').textContent = '✓';
+                    document.getElementById('step3').classList.add('current');
+                    
+                    // Hide form
+                    this.style.display = 'none';
+                    
+                    // Start polling for assignment
+                    startPollingForAssignment(result.waiting_id);
+                } else {
+                    throw new Error('Failed to join waiting room');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                btn.textContent = 'TRY AGAIN';
+                btn.disabled = false;
+                
+                // Shake animation on error
+                btn.style.animation = 'shake 0.5s';
+                setTimeout(() => btn.style.animation = '', 500);
+            }
+        });
+
+        // Get or create device ID
+        function getDeviceId() {
+            let id = localStorage.getItem('device_id');
+            if (!id) {
+                id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('device_id', id);
+            }
+            return id;
+        }
+
+        // Poll for assignment
+        let pollingInterval;
+        function startPollingForAssignment(waitingId) {
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/waiting-room/status/${waitingId}`);
+                    const status = await response.json();
+                    
+                    if (status.assigned) {
+                        clearInterval(pollingInterval);
+                        
+                        // Success animation
+                        document.querySelector('.waiting-animation').innerHTML = `
+                            <div class="center-dot" style="background: var(--success); animation: successPulse 0.5s;"></div>
+                        `;
+                        document.querySelector('.status-text').textContent = 'Access Granted!';
+                        document.querySelector('.status-subtext').textContent = 'Redirecting to your dashboard...';
+                        
+                        // Update steps
+                        document.getElementById('step3').classList.add('completed');
+                        document.getElementById('step3').classList.remove('current');
+                        document.getElementById('step3').querySelector('.step-circle').textContent = '✓';
+                        document.getElementById('step4').classList.add('current');
+                        
+                        // Haptic success
+                        if (navigator.vibrate) {
+                            navigator.vibrate([100, 50, 100]);
+                        }
+                        
+                        // Redirect
+                        setTimeout(() => {
+                            window.location.href = status.redirect_url || '/dashboard';
+                        }, 2000);
+                    } else {
+                        // Update queue position
+                        document.getElementById('queueNumber').textContent = status.position || '1';
+                        document.getElementById('waitingCount').textContent = status.waiting_count || '0';
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 3000); // Poll every 3 seconds
+        }
+
+        // WebSocket for real-time updates (preferred over polling)
+        function connectWebSocket(waitingId) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${protocol}//${window.location.host}/ws/waiting/${waitingId}`);
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'position_update') {
+                    document.getElementById('queueNumber').textContent = data.position;
+                    document.getElementById('waitingCount').textContent = data.waiting_count;
+                }
+                
+                if (data.type === 'assigned') {
+                    // Same success handling as polling
+                    clearInterval(pollingInterval);
+                    ws.close();
+                    // ... success animation and redirect
+                }
+            };
+            
+            ws.onerror = function() {
+                // Fall back to polling
+                startPollingForAssignment(waitingId);
+            };
+        }
+
+        // Shake animation keyframes (for errors)
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-10px); }
+                40%, 80% { transform: translateX(10px); }
+            }
+            @keyframes successPulse {
+                0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+                50% { transform: translate(-50%, -50%) scale(1.2); }
+                100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+    <!-- Theme Manager (P5) -->
+    <script src="/static/js/theme-manager.js"></script>
+</body>
+</html>

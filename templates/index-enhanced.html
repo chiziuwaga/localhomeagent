@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff3333">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="AI-powered local home automation for co-living spaces">
+    <link rel="manifest" href="/templates/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192x192.png">
+    <title>{{ home_name }} - Local Home Agent</title>
+    <style>
+        /* ============================================================
+           NEO-BRUTALIST + SWISS DESIGN SYSTEM
+           P5: Complete UI/UX Polish with Micro-Interactions
+           
+           Design Rationale:
+           - Brutalist: Heavy borders, offset shadows, raw materials
+           - Swiss: Grid system, clear typography, functional design
+           - Micro-interactions: Purposeful animations that provide feedback
+           ============================================================ */
+
+        :root {
+            /* Color System */
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-elevated: #222222;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            
+            --accent-primary: #ff3333;
+            --accent-secondary: #ff6b6b;
+            --accent-tertiary: #cc0000;
+            --accent-glow: rgba(255, 51, 51, 0.3);
+            
+            --success: #00ff88;
+            --success-glow: rgba(0, 255, 136, 0.3);
+            --warning: #ffaa00;
+            --error: #ff3333;
+            --info: #00aaff;
+            
+            --border-color: #ffffff;
+            --border-subtle: #333333;
+            --border-accent: var(--accent-primary);
+            
+            /* Typography */
+            --font-mono: 'Courier New', 'SF Mono', 'Monaco', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            
+            /* Spacing (8px grid) */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --space-10: 40px;
+            --space-12: 48px;
+            
+            /* Shadows - Brutalist Offset */
+            --shadow-sm: 4px 4px 0 var(--accent-primary);
+            --shadow-md: 8px 8px 0 var(--accent-primary);
+            --shadow-lg: 12px 12px 0 var(--accent-primary);
+            --shadow-hover: 12px 12px 0 var(--accent-primary);
+            
+            /* Transitions */
+            --ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --duration-fast: 150ms;
+            --duration-normal: 250ms;
+            --duration-slow: 400ms;
+        }
+
+        /* Light theme */
+        [data-theme="light"] {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #eeeeee;
+            --bg-card: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --border-color: #000000;
+            --border-subtle: #cccccc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-6);
+            padding-top: calc(var(--space-6) + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Swiss Grid Overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ============================================================
+           MAIN CONTAINER
+           ============================================================ */
+
+        .container {
+            max-width: 480px;
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 4px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+            position: relative;
+            
+            /* Entry animation */
+            animation: containerSlideUp 0.6s var(--ease-spring) forwards;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        @keyframes containerSlideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Top accent stripe */
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, 
+                var(--accent-primary) 0%, 
+                var(--accent-secondary) 25%,
+                var(--accent-primary) 50%,
+                var(--accent-secondary) 75%,
+                var(--accent-primary) 100%);
+            background-size: 200% 100%;
+            animation: stripeMove 3s linear infinite;
+        }
+
+        @keyframes stripeMove {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .content {
+            padding: var(--space-10);
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+            animation: fadeIn 0.8s var(--ease-out) 0.2s forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .logo-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+
+        .logo-dot {
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            position: relative;
+        }
+
+        /* Pulsing glow effect */
+        .logo-dot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: logoPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% {
+                opacity: 0.5;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(2.5);
+            }
+        }
+
+        .home-name {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: var(--space-2);
+        }
+
+        /* ============================================================
+           WELCOME MESSAGE
+           ============================================================ */
+
+        .welcome-section {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-subtle);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+            animation: fadeIn 0.8s var(--ease-out) 0.3s forwards;
+            opacity: 0;
+        }
+
+        .welcome-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: var(--space-3);
+        }
+
+        .welcome-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ============================================================
+           ROLE SELECTION CARDS
+           ============================================================ */
+
+        .role-section {
+            margin-bottom: var(--space-6);
+            animation: fadeIn 0.8s var(--ease-out) 0.4s forwards;
+            opacity: 0;
+        }
+
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-3);
+        }
+
+        .role-card {
+            background: var(--bg-tertiary);
+            border: 3px solid var(--border-subtle);
+            padding: var(--space-5);
+            text-align: center;
+            cursor: pointer;
+            transition: 
+                transform var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--accent-primary);
+            opacity: 0;
+            transition: opacity var(--duration-fast) var(--ease-out);
+            z-index: 0;
+        }
+
+        .role-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .role-card:hover::before {
+            opacity: 0.05;
+        }
+
+        .role-card.selected {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .role-card.selected::before {
+            opacity: 0.1;
+        }
+
+        .role-card input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .role-icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .role-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ============================================================
+           PRIMARY ACTION BUTTON
+           ============================================================ */
+
+        .actions {
+            animation: fadeIn 0.8s var(--ease-out) 0.5s forwards;
+            opacity: 0;
+        }
+
+        .btn-primary {
+            display: block;
+            width: 100%;
+            padding: var(--space-5);
+            background: var(--accent-primary);
+            color: #000000;
+            border: 4px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: 
+                transform var(--duration-fast) var(--ease-out),
+                box-shadow var(--duration-fast) var(--ease-out);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .btn-primary:active {
+            transform: translate(6px, 6px);
+        }
+
+        /* Ripple effect */
+        .btn-primary .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: rippleEffect 0.6s linear;
+            pointer-events: none;
+        }
+
+        @keyframes rippleEffect {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .btn-secondary {
+            display: block;
+            width: 100%;
+            padding: var(--space-4);
+            background: transparent;
+            color: var(--text-primary);
+            border: 3px solid var(--border-subtle);
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            margin-top: var(--space-3);
+            transition: 
+                background var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--text-secondary);
+        }
+
+        /* ============================================================
+           STATUS INDICATOR
+           ============================================================ */
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            padding: var(--space-4);
+            background: var(--bg-tertiary);
+            border-top: 2px solid var(--border-subtle);
+            margin-top: var(--space-6);
+            animation: fadeIn 0.8s var(--ease-out) 0.6s forwards;
+            opacity: 0;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: statusPulse 2s infinite;
+        }
+
+        .status-online {
+            background: var(--success);
+        }
+
+        .status-offline {
+            background: var(--error);
+        }
+
+        @keyframes statusPulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 var(--success-glow);
+            }
+            50% {
+                box-shadow: 0 0 0 6px transparent;
+            }
+        }
+
+        .status-text {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ============================================================
+           FOOTER
+           ============================================================ */
+
+        .footer {
+            text-align: center;
+            padding: var(--space-4);
+            border-top: 2px solid var(--border-subtle);
+            background: var(--bg-primary);
+        }
+
+        .footer p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ============================================================
+           CAPTIVE PORTAL DETECTION NOTICE
+           ============================================================ */
+
+        .captive-notice {
+            background: var(--bg-elevated);
+            border: 2px dashed var(--border-subtle);
+            padding: var(--space-4);
+            margin-bottom: var(--space-6);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            animation: fadeIn 0.8s var(--ease-out) 0.2s forwards;
+            opacity: 0;
+        }
+
+        .captive-notice strong {
+            color: var(--text-primary);
+        }
+
+        /* ============================================================
+           THEME TOGGLE
+           ============================================================ */
+
+        .theme-toggle {
+            position: fixed;
+            top: calc(var(--space-4) + env(safe-area-inset-top, 0px));
+            right: var(--space-4);
+            width: 40px;
+            height: 40px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: 
+                background var(--duration-fast) var(--ease-out),
+                border-color var(--duration-fast) var(--ease-out);
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-primary);
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+
+        @media (max-width: 480px) {
+            .content {
+                padding: var(--space-6);
+            }
+
+            .home-name {
+                font-size: 1.5rem;
+            }
+
+            .role-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .role-card {
+                display: flex;
+                align-items: center;
+                gap: var(--space-3);
+                text-align: left;
+                padding: var(--space-4);
+            }
+
+            .role-icon {
+                font-size: 1.5rem;
+                margin-bottom: 0;
+            }
+
+            .container {
+                box-shadow: var(--shadow-sm);
+            }
+        }
+
+        /* Touch devices */
+        @media (hover: none) {
+            .btn-primary:hover,
+            .btn-secondary:hover,
+            .role-card:hover {
+                transform: none;
+            }
+
+            .btn-primary:active {
+                transform: scale(0.98);
+                opacity: 0.9;
+            }
+
+            .role-card:active {
+                transform: scale(0.98);
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <span id="themeIcon">🌙</span>
+    </button>
+
+    <div class="container">
+        <!-- Captive Portal Notice (shown when detected) -->
+        <div class="captive-notice" id="captiveNotice" style="display: none;">
+            <strong>📶 Connected to {{ home_name }} WiFi</strong><br>
+            Sign in to continue using the internet
+        </div>
+
+        <div class="content">
+            <!-- Header -->
+            <header class="header">
+                <div class="logo-container">
+                    <span class="logo-dot"></span>
+                    <h1 class="home-name">{{ home_name }}</h1>
+                </div>
+                <p class="tagline">AI-Powered Home Assistant</p>
+            </header>
+
+            {% if is_configured %}
+                <!-- Configured State -->
+                <div class="welcome-section">
+                    <div class="welcome-title">Welcome Back</div>
+                    <div class="welcome-text">
+                        Your local home agent is ready. Access the dashboard to manage devices, 
+                        chat with the AI, or check home status.
+                    </div>
+                </div>
+
+                <!-- Role Selection -->
+                <div class="role-section">
+                    <div class="role-grid">
+                        <label class="role-card selected" data-role="resident">
+                            <input type="radio" name="role" value="resident" checked>
+                            <div class="role-icon">🏠</div>
+                            <div class="role-label">Resident</div>
+                        </label>
+                        <label class="role-card" data-role="guest">
+                            <input type="radio" name="role" value="guest">
+                            <div class="role-icon">👋</div>
+                            <div class="role-label">Guest</div>
+                        </label>
+                        <label class="role-card" data-role="admin">
+                            <input type="radio" name="role" value="admin">
+                            <div class="role-icon">⚙️</div>
+                            <div class="role-label">Admin</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a href="/dashboard" class="btn-primary" id="primaryBtn">
+                        OPEN DASHBOARD
+                    </a>
+                    <a href="/chat" class="btn-secondary">
+                        Chat with AI Agent
+                    </a>
+                </div>
+
+            {% else %}
+                <!-- Setup Required State -->
+                <div class="welcome-section">
+                    <div class="welcome-title">First Time Setup</div>
+                    <div class="welcome-text">
+                        Welcome! This is your first time accessing the Local Home Agent. 
+                        Let's configure your co-living space in a few simple steps.
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a href="/setup" class="btn-primary">
+                        START SETUP WIZARD
+                    </a>
+                </div>
+            {% endif %}
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <span class="status-dot status-online" id="statusDot"></span>
+                <span class="status-text" id="statusText">System Online</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by <a href="https://fixitforme.ai">FixItForMe.ai</a></p>
+            <p>Local Home Agent v1.0.0</p>
+        </footer>
+    </div>
+
+    <script>
+        // ============================================================
+        // MICRO-INTERACTIONS & CAPTIVE PORTAL DETECTION
+        // ============================================================
+
+        // Detect captive portal
+        (function detectCaptivePortal() {
+            // Check if this page was loaded as a captive portal
+            const urlParams = new URLSearchParams(window.location.search);
+            const isCaptive = urlParams.has('captive') || 
+                              document.referrer.includes('captive') ||
+                              !localStorage.getItem('home_agent_visited');
+            
+            if (isCaptive && !localStorage.getItem('home_agent_visited')) {
+                document.getElementById('captiveNotice').style.display = 'block';
+                localStorage.setItem('home_agent_visited', 'true');
+            }
+        })();
+
+        // Role card selection
+        document.querySelectorAll('.role-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                this.querySelector('input').checked = true;
+                
+                // Update button text based on role
+                const role = this.dataset.role;
+                const btn = document.getElementById('primaryBtn');
+                if (btn) {
+                    if (role === 'guest') {
+                        btn.textContent = 'ENTER WAITING ROOM';
+                        btn.href = '/waiting-room';
+                    } else if (role === 'admin') {
+                        btn.textContent = 'ADMIN DASHBOARD';
+                        btn.href = '/dashboard?admin=1';
+                    } else {
+                        btn.textContent = 'OPEN DASHBOARD';
+                        btn.href = '/dashboard';
+                    }
+                }
+                
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(10);
+                }
+            });
+        });
+
+        // Button ripple effect
+        document.querySelectorAll('.btn-primary').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                
+                const rect = this.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = (e.clientX - rect.left - size/2) + 'px';
+                ripple.style.top = (e.clientY - rect.top - size/2) + 'px';
+                
+                this.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
+        });
+
+        // Theme toggle is handled by theme-manager.js
+        // Remove the inline toggle button as theme-manager.js creates one
+        const existingToggle = document.getElementById('themeToggle');
+        if (existingToggle) {
+            existingToggle.remove();
+        }
+
+        // Health check for status indicator
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    document.getElementById('statusDot').classList.remove('status-offline');
+                    document.getElementById('statusDot').classList.add('status-online');
+                    document.getElementById('statusText').textContent = 'System Online';
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                document.getElementById('statusDot').classList.remove('status-online');
+                document.getElementById('statusDot').classList.add('status-offline');
+                document.getElementById('statusText').textContent = 'Connecting...';
+            }
+        }
+        
+        // Check health on load and periodically
+        checkHealth();
+        setInterval(checkHealth, 30000);
+
+        // PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Could show a custom install button here
+        });
+    </script>
+    <!-- Theme Manager (P5) -->
+    <script src="/static/js/theme-manager.js"></script>
+</body>
+</html>

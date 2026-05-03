@@ -1,0 +1,270 @@
+# Build and Release Polished Installers for Local Home Agent
+# Triggers on version tags (v1.0.0, v1.2.3, etc.)
+
+name: Build Installers
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-installers-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  APP_NAME: LocalHomeAgent
+  APP_VERSION: ${{ github.ref_name || inputs.version || '1.0.0' }}
+
+jobs:
+  # ==========================================================================
+  # Build Windows Installer (NSIS)
+  # ==========================================================================
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable with PyInstaller
+        run: pyinstaller build.spec
+
+      - name: Verify build output
+        run: |
+          dir dist
+          if (!(Test-Path "dist\LocalHomeAgent.exe")) { exit 1 }
+        shell: pwsh
+
+      - name: Install NSIS
+        # `choco install` already adds NSIS to the runner PATH for subsequent
+        # steps; the prior `refreshenv` shim was unreliable in pwsh.
+        run: choco install nsis -y --no-progress
+        shell: pwsh
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
+          cd installers\windows
+          makensis installer.nsi
+          dir
+
+      - name: Generate SHA256 checksum
+        shell: pwsh
+        run: |
+          cd installers/windows
+          $exe = Get-ChildItem -Filter 'LocalHomeAgent-Setup-*.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Installer .exe not found' }
+          $hash = Get-FileHash -Algorithm SHA256 $exe.FullName
+          "$($hash.Hash.ToLower())  $($exe.Name)" | Out-File -Encoding ascii "$($exe.Name).sha256"
+          Get-Content "$($exe.Name).sha256"
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            installers/windows/LocalHomeAgent-Setup-*.exe
+            installers/windows/LocalHomeAgent-Setup-*.exe.sha256
+          if-no-files-found: error
+
+  # ==========================================================================
+  # Build macOS DMG
+  # ==========================================================================
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          brew install create-dmg
+
+      - name: Build executable with PyInstaller
+        run: pyinstaller build.spec
+
+      - name: Verify build output
+        run: |
+          ls -la dist/
+          test -f dist/LocalHomeAgent || exit 1
+
+      - name: Create app bundle and DMG
+        run: |
+          cd installers/macos
+          chmod +x create-dmg.sh
+          ./create-dmg.sh
+          ls -la *.dmg
+
+      - name: Generate SHA256 checksum
+        run: |
+          cd installers/macos
+          for dmg in LocalHomeAgent-*.dmg; do
+            shasum -a 256 "$dmg" > "$dmg.sha256"
+            cat "$dmg.sha256"
+          done
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: |
+            installers/macos/LocalHomeAgent-*.dmg
+            installers/macos/LocalHomeAgent-*.dmg.sha256
+          if-no-files-found: error
+
+  # ==========================================================================
+  # Build Linux AppImage
+  # ==========================================================================
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+          sudo apt-get update
+          sudo apt-get install -y libfuse2 file
+
+      - name: Build executable with PyInstaller
+        run: pyinstaller build.spec
+
+      - name: Verify build output
+        run: |
+          ls -la dist/
+          test -f dist/LocalHomeAgent || exit 1
+          file dist/LocalHomeAgent
+
+      - name: Create AppImage
+        run: |
+          cd installers/linux
+          chmod +x create-appimage.sh
+          ./create-appimage.sh
+          ls -la *.AppImage
+
+      - name: Generate SHA256 checksum
+        run: |
+          cd installers/linux
+          for img in LocalHomeAgent-*.AppImage; do
+            sha256sum "$img" > "$img.sha256"
+            cat "$img.sha256"
+          done
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: |
+            installers/linux/LocalHomeAgent-*.AppImage
+            installers/linux/LocalHomeAgent-*.AppImage.sha256
+          if-no-files-found: error
+
+  # ==========================================================================
+  # Create GitHub Release with all installers
+  # ==========================================================================
+  release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List downloaded artifacts
+        run: |
+          echo "=== Windows Installer ==="
+          ls -la windows-installer/ || echo "No Windows installer"
+          echo "=== macOS DMG ==="
+          ls -la macos-dmg/ || echo "No macOS DMG"
+          echo "=== Linux AppImage ==="
+          ls -la linux-appimage/ || echo "No Linux AppImage"
+
+      - name: Aggregate SHA256SUMS.txt
+        run: |
+          # Combine per-artifact checksum files into a single signed-style manifest.
+          {
+            cat windows-installer/*.sha256 2>/dev/null || true
+            cat macos-dmg/*.sha256 2>/dev/null || true
+            cat linux-appimage/*.sha256 2>/dev/null || true
+          } > SHA256SUMS.txt
+          echo "--- SHA256SUMS.txt ---"
+          cat SHA256SUMS.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows-installer/*
+            macos-dmg/*
+            linux-appimage/*
+            SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          name: "Local Home Agent ${{ github.ref_name }}"
+          body: |
+            ## Downloads
+
+            | Platform | File | Description |
+            |----------|------|-------------|
+            | Windows | `LocalHomeAgent-Setup-*.exe` | Windows installer with shortcuts |
+            | macOS | `LocalHomeAgent-*.dmg` | Drag-and-drop installer |
+            | Linux | `LocalHomeAgent-*.AppImage` | Portable AppImage |
+
+            ## Verifying downloads
+
+            All artifacts ship with SHA256 checksums. Verify with:
+            - Windows (PowerShell): `Get-FileHash -Algorithm SHA256 LocalHomeAgent-Setup-*.exe`
+            - macOS / Linux: `shasum -a 256 -c SHA256SUMS.txt`
+
+            ## Installation
+
+            **Windows**: Run the `.exe` installer and follow the prompts.
+
+            **macOS**: Open the `.dmg`, drag Local Home Agent to Applications.
+
+            **Linux**: Make the AppImage executable (`chmod +x *.AppImage`) and run it.
+
+            ## Requirements
+
+            - **Ollama** (optional but recommended): https://ollama.com/download
+            - 8GB RAM minimum, 16GB recommended
+            - 5GB disk space

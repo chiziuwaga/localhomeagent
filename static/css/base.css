@@ -1,0 +1,800 @@
+/**
+ * Local Home Agent - Mobile-First Base CSS
+ * 
+ * Design System: Neo-Brutalist Swiss Dark Mode
+ * MATCHES the Co-Living Web Platform UI (Unplatform-inspired)
+ * 
+ * - Black background (#0a0a0a)
+ * - White text
+ * - Red accent (#ff3333)
+ * - 2-4px borders
+ * - Monospace fonts
+ */
+
+/* ============================================
+   CSS Variables & Theme (DARK MODE DEFAULT)
+   ============================================ */
+:root {
+    /* Colors - Dark Mode (matches web platform) */
+    --color-bg: #0a0a0a;
+    --color-bg-elevated: #1a1a1a;
+    --color-surface: #1a1a1a;
+    --color-surface-hover: #2a2a2a;
+    --color-text: #ffffff;
+    --color-text-muted: #888888;
+    --color-border: #333333;
+    --color-border-strong: #ffffff;
+    
+    /* Accent colors */
+    --color-accent: #ff3333;
+    --color-accent-light: #ff6666;
+    --color-accent-dark: #cc0000;
+    --color-success: #00cc00;
+    --color-warning: #ffcc00;
+    --color-danger: #ff3333;
+    --color-info: #3399ff;
+    
+    /* Spacing (8px grid) */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    
+    /* Border widths */
+    --border-sm: 2px;
+    --border-md: 3px;
+    --border-lg: 4px;
+    
+    /* Shadows (brutalist offset) */
+    --shadow-sm: 4px 4px 0 var(--color-border);
+    --shadow-md: 6px 6px 0 var(--color-border);
+    --shadow-lg: 8px 8px 0 rgba(255, 255, 255, 0.1);
+    
+    /* Typography */
+    --font-family: 'Courier New', Courier, monospace;
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-md: 1rem;       /* 16px */
+    --font-size-lg: 1.25rem;    /* 20px */
+    --font-size-xl: 1.5rem;     /* 24px */
+    --font-size-2xl: 2rem;      /* 32px */
+    
+    /* Touch targets (minimum 44px) */
+    --touch-target: 44px;
+    
+    /* Safe areas for notched devices */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    
+    /* Animation durations */
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 400ms;
+    
+    /* Z-index layers */
+    --z-base: 1;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-overlay: 300;
+    --z-modal: 400;
+    --z-toast: 500;
+}
+
+/* ============================================
+   Light Mode Theme
+   ============================================ */
+[data-theme="light"] {
+    --color-bg: #f5f5f5;
+    --color-bg-elevated: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-hover: #eeeeee;
+    --color-text: #000000;
+    --color-text-muted: #666666;
+    --color-border: #cccccc;
+    --color-border-strong: #000000;
+    --shadow-sm: 4px 4px 0 #000000;
+    --shadow-md: 6px 6px 0 #000000;
+    --shadow-lg: 8px 8px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   Reset & Base Styles
+   ============================================ */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    line-height: 1.5;
+    color: var(--color-text);
+    background: var(--color-bg);
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   Mobile Navigation
+   ============================================ */
+.mobile-nav {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    background: var(--color-surface);
+    border-bottom: var(--border-lg) solid var(--color-border);
+    padding: 0 var(--space-md);
+    padding-top: var(--safe-top);
+    z-index: var(--z-sticky);
+}
+
+.mobile-nav-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.mobile-nav-title {
+    font-size: var(--font-size-lg);
+    font-weight: bold;
+}
+
+.mobile-nav-title .accent {
+    color: var(--color-accent);
+}
+
+/* Hamburger button */
+.hamburger-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+}
+
+.hamburger-btn span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: var(--color-border);
+    transition: all var(--duration-fast);
+}
+
+.hamburger-btn.active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Mobile menu overlay */
+.mobile-menu {
+    position: fixed;
+    top: 56px;
+    top: calc(56px + var(--safe-top));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-surface);
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal);
+    z-index: var(--z-overlay);
+    overflow-y: auto;
+    padding: var(--space-lg);
+    padding-bottom: calc(var(--space-lg) + var(--safe-bottom));
+}
+
+.mobile-menu.open {
+    transform: translateX(0);
+}
+
+.mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    border: var(--border-md) solid var(--color-border);
+    text-decoration: none;
+    color: var(--color-text);
+    font-weight: bold;
+    transition: all var(--duration-fast);
+    min-height: var(--touch-target);
+}
+
+.mobile-menu-item:hover,
+.mobile-menu-item:active,
+.mobile-menu-item.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+.mobile-menu-item-icon {
+    font-size: 1.5rem;
+}
+
+/* Desktop navigation */
+.desktop-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--color-surface);
+    border-bottom: var(--border-lg) solid var(--color-border);
+}
+
+.desktop-nav h1 {
+    font-size: var(--font-size-xl);
+}
+
+.desktop-nav ul {
+    display: flex;
+    list-style: none;
+    gap: var(--space-md);
+}
+
+.desktop-nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    padding: var(--space-sm) var(--space-md);
+    border: var(--border-sm) solid var(--color-border);
+    transition: all var(--duration-fast);
+}
+
+.desktop-nav a:hover,
+.desktop-nav a.active {
+    background: var(--color-accent);
+    color: white;
+}
+
+/* Show/hide based on screen size */
+@media (max-width: 767px) {
+    .mobile-nav {
+        display: block;
+    }
+    
+    .desktop-nav {
+        display: none;
+    }
+    
+    body {
+        padding-top: calc(56px + var(--safe-top));
+    }
+}
+
+/* ============================================
+   Bottom Navigation Bar (Mobile)
+   ============================================ */
+.bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-top: var(--border-lg) solid var(--color-border);
+    padding-bottom: var(--safe-bottom);
+    z-index: var(--z-sticky);
+}
+
+.bottom-nav-items {
+    display: flex;
+    justify-content: space-around;
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-sm) var(--space-xs);
+    min-height: var(--touch-target);
+    text-decoration: none;
+    color: var(--color-text-muted);
+    transition: all var(--duration-fast);
+}
+
+.bottom-nav-item.active {
+    color: var(--color-accent);
+}
+
+.bottom-nav-item-icon {
+    font-size: 1.5rem;
+    margin-bottom: 2px;
+}
+
+.bottom-nav-item-label {
+    font-size: var(--font-size-xs);
+    font-weight: bold;
+}
+
+@media (max-width: 767px) {
+    .bottom-nav {
+        display: block;
+    }
+    
+    body {
+        padding-bottom: calc(60px + var(--safe-bottom));
+    }
+}
+
+/* ============================================
+   Container & Layout
+   ============================================ */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-md);
+    padding-left: calc(var(--space-md) + var(--safe-left));
+    padding-right: calc(var(--space-md) + var(--safe-right));
+}
+
+@media (min-width: 768px) {
+    .container {
+        padding: var(--space-lg);
+    }
+}
+
+/* ============================================
+   Cards
+   ============================================ */
+.card {
+    background: var(--color-surface);
+    border: var(--border-lg) solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+@media (max-width: 479px) {
+    .card {
+        box-shadow: var(--shadow-sm);
+        padding: var(--space-md);
+    }
+}
+
+.card h2 {
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: var(--border-sm) solid var(--color-border);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-lg);
+    min-height: var(--touch-target);
+    background: var(--color-accent);
+    color: white;
+    border: var(--border-lg) solid var(--color-border);
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    font-weight: bold;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--duration-fast);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.button:hover {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+}
+
+.button:active {
+    transform: translate(4px, 4px);
+    box-shadow: none;
+}
+
+.button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.button-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.button-success {
+    background: var(--color-success);
+}
+
+.button-full {
+    width: 100%;
+}
+
+/* Touch-friendly adjustments */
+@media (hover: none) {
+    .button:hover {
+        transform: none;
+    }
+    
+    .button:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+}
+
+/* ============================================
+   Form Elements
+   ============================================ */
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: var(--space-sm);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    min-height: var(--touch-target);
+    font-family: var(--font-family);
+    font-size: var(--font-size-md);
+    border: var(--border-md) solid var(--color-border);
+    background: var(--color-surface);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.form-group small {
+    display: block;
+    margin-top: var(--space-xs);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+/* ============================================
+   Toggle Switch (Touch-friendly)
+   ============================================ */
+.toggle {
+    position: relative;
+    width: 60px;
+    height: 32px;
+    cursor: pointer;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #ccc;
+    border: var(--border-md) solid var(--color-border);
+    transition: all var(--duration-fast);
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    left: 2px;
+    top: 2px;
+    background: var(--color-surface);
+    border: var(--border-sm) solid var(--color-border);
+    transition: all var(--duration-fast);
+}
+
+.toggle input:checked + .toggle-slider {
+    background: var(--color-accent);
+}
+
+.toggle input:checked + .toggle-slider::before {
+    transform: translateX(28px);
+}
+
+/* ============================================
+   Device Toggle (from dashboard)
+   ============================================ */
+.device-toggle {
+    width: 56px;
+    height: 32px;
+    background: #ddd;
+    border: var(--border-md) solid var(--color-border);
+    cursor: pointer;
+    position: relative;
+    transition: all var(--duration-fast);
+}
+
+.device-toggle::before {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    left: 3px;
+    top: 3px;
+    background: var(--color-surface);
+    border: var(--border-sm) solid var(--color-border);
+    transition: all var(--duration-fast);
+}
+
+.device-toggle.on {
+    background: var(--color-accent);
+}
+
+.device-toggle.on::before {
+    transform: translateX(24px);
+}
+
+/* ============================================
+   Grid Layouts
+   ============================================ */
+.grid {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.grid-2 {
+    grid-template-columns: 1fr;
+}
+
+.grid-3 {
+    grid-template-columns: 1fr;
+}
+
+.grid-4 {
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 480px) {
+    .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Auto-fit grid */
+.grid-auto {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+@media (max-width: 479px) {
+    .grid-auto {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   Stats Grid (from dashboard)
+   ============================================ */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.stat-card {
+    background: var(--color-surface);
+    border: var(--border-lg) solid var(--color-border);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.stat-value {
+    font-size: var(--font-size-2xl);
+    font-weight: bold;
+    color: var(--color-accent);
+}
+
+.stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+@media (max-width: 359px) {
+    .stat-value {
+        font-size: var(--font-size-xl);
+    }
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.accent { color: var(--color-accent); }
+.text-muted { color: var(--color-text-muted); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+.hidden { display: none !important; }
+.visible { display: block !important; }
+
+/* Hide on mobile */
+@media (max-width: 767px) {
+    .hide-mobile { display: none !important; }
+}
+
+/* Hide on desktop */
+@media (min-width: 768px) {
+    .hide-desktop { display: none !important; }
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.animate-fadeIn { animation: fadeIn var(--duration-normal) ease-out; }
+.animate-slideUp { animation: slideUp var(--duration-normal) ease-out; }
+.animate-slideDown { animation: slideDown var(--duration-normal) ease-out; }
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   Offline Indicator
+   ============================================ */
+.offline-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-danger);
+    color: white;
+    text-align: center;
+    padding: var(--space-sm);
+    padding-top: calc(var(--space-sm) + var(--safe-top));
+    font-size: var(--font-size-sm);
+    font-weight: bold;
+    z-index: var(--z-toast);
+    display: none;
+}
+
+.offline-indicator.visible {
+    display: block;
+}
+
+body.is-offline .offline-indicator {
+    display: block;
+}
+
+body.is-offline .mobile-nav,
+body.is-offline .desktop-nav {
+    top: 36px;
+    top: calc(36px + var(--safe-top));
+}
+
+body.is-offline {
+    padding-top: calc(92px + var(--safe-top));
+}
+
+@media (min-width: 768px) {
+    body.is-offline {
+        padding-top: 36px;
+    }
+}

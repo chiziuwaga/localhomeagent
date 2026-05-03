@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Wizard - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        .progress {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 40px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 8px;
+            background: #ddd;
+            border: 2px solid black;
+            transition: background 0.3s;
+        }
+
+        .progress-step.active {
+            background: #ff3333;
+        }
+
+        .step {
+            display: none;
+            background: white;
+            border: 4px solid black;
+            box-shadow: 8px 8px 0 black;
+            padding: 40px;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .step h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .step p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+        }
+
+        .button {
+            padding: 16px 32px;
+            background: #ff3333;
+            color: white;
+            border: 4px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 12px;
+        }
+
+        .button:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .button-secondary {
+            background: white;
+            color: black;
+        }
+
+        .model-card {
+            border: 2px solid black;
+            padding: 20px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-card:hover {
+            background: #f0f0f0;
+        }
+
+        .model-card.selected {
+            background: #ff3333;
+            color: white;
+        }
+
+        .model-card h3 {
+            margin-bottom: 8px;
+        }
+
+        .model-card p {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #00ff00;
+            color: black;
+            border: 2px solid black;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 640px) {
+            .step {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .step h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="animated-bg" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.03;"></canvas>
+    <div class="container">
+        <div class="header">
+            <h1><span class="accent">●</span> Setup Wizard</h1>
+            <p>Let's configure your Local Home Agent</p>
+        </div>
+
+        <div class="progress">
+            <div class="progress-step active" data-step="1"></div>
+            <div class="progress-step" data-step="2"></div>
+            <div class="progress-step" data-step="3"></div>
+            <div class="progress-step" data-step="4"></div>
+        </div>
+
+        <!-- Step 1: Welcome -->
+        <div class="step active" data-step="1">
+            <h2>Welcome!</h2>
+            <p>This wizard will help you set up your Local Home Agent for managing your co-living space.</p>
+            <p>You'll configure:</p>
+            <ul style="margin-left: 24px; margin-bottom: 30px; line-height: 2;">
+                <li>Home name and basic settings</li>
+                <li>Local AI model for offline operation</li>
+                <li>Home Assistant integration (optional)</li>
+                <li>User access and permissions</li>
+            </ul>
+            <button class="button" onclick="nextStep()">GET STARTED</button>
+        </div>
+
+        <!-- Step 2: Basic Settings -->
+        <div class="step" data-step="2">
+            <h2>Basic Settings</h2>
+            <p>Let's start with some basic information about your home.</p>
+
+            <div class="form-group">
+                <label for="home-name">Home Name</label>
+                <input type="text" id="home-name" placeholder="e.g., Sunset Co-Living House" value="My Co-Living Space">
+            </div>
+
+            <div class="form-group">
+                <label for="timezone">Timezone</label>
+                <select id="timezone">
+                    <option value="America/New_York">Eastern Time (ET)</option>
+                    <option value="America/Chicago">Central Time (CT)</option>
+                    <option value="America/Denver">Mountain Time (MT)</option>
+                    <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="max-residents">Maximum Residents</label>
+                <input type="number" id="max-residents" value="5" min="1" max="20">
+            </div>
+
+            <button class="button-secondary button" onclick="prevStep()">BACK</button>
+            <button class="button" onclick="nextStep()">CONTINUE</button>
+        </div>
+
+        <!-- Step 3: LLM Selection -->
+        <div class="step" data-step="3">
+            <h2>Choose AI Model</h2>
+            <p>Select a local AI model to power your home agent. Recommended models are optimized for home automation.</p>
+
+            <div class="model-card" onclick="selectModel('llama-3.2-1b')">
+                <h3>Llama 3.2 1B <span class="badge">RECOMMENDED</span></h3>
+                <p><strong>Size:</strong> 1.3 GB | <strong>RAM Required:</strong> 2 GB</p>
+                <p>Lightweight model perfect for basic home automation and chat. Fast responses on modest hardware.</p>
+            </div>
+
+            <div class="model-card" onclick="selectModel('llama-3.2-3b')">
+                <h3>Llama 3.2 3B <span class="badge">RECOMMENDED</span></h3>
+                <p><strong>Size:</strong> 3.2 GB | <strong>RAM Required:</strong> 4 GB</p>
+                <p>Balanced performance and size. Better understanding of complex requests.</p>
+            </div>
+
+            <div class="model-card" onclick="selectModel('mistral-7b')">
+                <h3>Mistral 7B</h3>
+                <p><strong>Size:</strong> 4.1 GB | <strong>RAM Required:</strong> 8 GB</p>
+                <p>High performance model for advanced automation. Requires more powerful hardware.</p>
+            </div>
+
+            <button class="button-secondary button" onclick="prevStep()">BACK</button>
+            <button class="button" onclick="nextStep()">CONTINUE</button>
+        </div>
+
+        <!-- Step 4: Complete -->
+        <div class="step" data-step="4">
+            <h2>Setup Complete!</h2>
+            <p>Your Local Home Agent is ready to use. The selected AI model will download in the background.</p>
+
+            <div style="background: #f0f0f0; border: 2px solid black; padding: 20px; margin-bottom: 30px;">
+                <p style="margin-bottom: 16px;"><strong>Configuration Summary:</strong></p>
+                <p>Home Name: <strong id="summary-home-name">-</strong></p>
+                <p>AI Model: <strong id="summary-model">-</strong></p>
+                <p>Status: <strong style="color: #00ff00;">Ready</strong></p>
+            </div>
+
+            <button class="button" onclick="completeSetup()">GO TO DASHBOARD</button>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedModel = 'llama-3.2-1b';
+
+        function nextStep() {
+            if (currentStep < 4) {
+                // Hide current step
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.remove('active');
+
+                // Show next step
+                currentStep++;
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.add('active');
+
+                // Update summary on last step
+                if (currentStep === 4) {
+                    document.getElementById('summary-home-name').textContent = document.getElementById('home-name').value;
+                    document.getElementById('summary-model').textContent = selectedModel;
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                // Hide current step
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.remove('active');
+
+                // Show previous step
+                currentStep--;
+                document.querySelector(`.step[data-step="${currentStep}"]`).classList.add('active');
+                document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.add('active');
+            }
+        }
+
+        function selectModel(modelId) {
+            selectedModel = modelId;
+            // Remove selected class from all cards
+            document.querySelectorAll('.model-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            // Add selected class to clicked card
+            event.currentTarget.classList.add('selected');
+        }
+
+        async function completeSetup() {
+            // Save settings
+            const settings = {
+                home_name: document.getElementById('home-name').value,
+                admin_configured: true,
+                llm_configured: true,
+                wifi_configured: true,
+            };
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings),
+                });
+
+                if (response.ok) {
+                    // Redirect to dashboard
+                    window.location.href = '/dashboard';
+                }
+            } catch (error) {
+                console.error('Setup error:', error);
+                alert('Setup failed. Please try again.');
+            }
+        }
+    </script>
+
+    <script>
+        // Animated background
+        const canvas = document.getElementById('animated-bg');
+        const ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        const shapes = [];
+        for (let i = 0; i < 8; i++) {
+            shapes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: 40 + Math.random() * 60,
+                dx: (Math.random() - 0.5) * 0.5,
+                dy: (Math.random() - 0.5) * 0.5,
+                type: Math.floor(Math.random() * 3)
+            });
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            
+            shapes.forEach(shape => {
+                ctx.beginPath();
+                if (shape.type === 0) {
+                    ctx.rect(shape.x, shape.y, shape.size, shape.size);
+                } else if (shape.type === 1) {
+                    ctx.arc(shape.x, shape.y, shape.size / 2, 0, Math.PI * 2);
+                } else {
+                    ctx.moveTo(shape.x, shape.y - shape.size / 2);
+                    ctx.lineTo(shape.x + shape.size / 2, shape.y + shape.size / 2);
+                    ctx.lineTo(shape.x - shape.size / 2, shape.y + shape.size / 2);
+                    ctx.closePath();
+                }
+                ctx.stroke();
+                
+                shape.x += shape.dx;
+                shape.y += shape.dy;
+                
+                if (shape.x < -shape.size) shape.x = canvas.width + shape.size;
+                if (shape.x > canvas.width + shape.size) shape.x = -shape.size;
+                if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
+                if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

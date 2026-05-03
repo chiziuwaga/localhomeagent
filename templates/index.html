@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ home_name }} - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated Background */
+        #animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border: 4px solid black;
+            box-shadow: 8px 8px 0 black;
+            padding: 40px;
+            position: relative;
+            z-index: 1;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .accent {
+            color: #ff3333;
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: #ff3333;
+            color: white;
+            border: 4px solid black;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-decoration: none;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .button:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .button:active {
+            transform: translate(6px, 6px);
+        }
+
+        .button-secondary {
+            background: white;
+            color: black;
+        }
+
+        .status {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f0f0;
+            border: 2px solid black;
+            text-align: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #00ff00;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-offline {
+            background: #ff0000;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="animated-bg"></canvas>
+    <div class="container">
+        <h1>
+            <span class="accent">●</span> {{ home_name }}
+        </h1>
+
+        {% if is_configured %}
+            <p>Welcome to your local home agent. Access the dashboard to manage your co-living space.</p>
+
+            <a href="/dashboard" class="button">
+                OPEN DASHBOARD
+            </a>
+
+            <a href="/chat" class="button button-secondary">
+                CHAT WITH AI AGENT
+            </a>
+
+            <div class="status">
+                <span class="status-indicator status-online"></span>
+                <strong>System Online</strong>
+            </div>
+        {% else %}
+            <p>Welcome! This is your first time accessing the Local Home Agent. Let's get you set up.</p>
+
+            <a href="/setup" class="button">
+                START SETUP WIZARD
+            </a>
+
+            <div class="status">
+                <span class="status-indicator status-offline"></span>
+                <strong>Setup Required</strong>
+            </div>
+        {% endif %}
+
+        <div style="margin-top: 30px; text-align: center; font-size: 0.9rem; color: #666;">
+            <p>Made by <a href="https://fixitforme.ai" style="color: #ff3333; font-weight: bold;">FixItForMe.ai</a></p>
+            <p>Local Home Agent v1.0.0</p>
+        </div>
+    </div>
+
+    <script>
+        // Neobrutalist Animated Background
+        const canvas = document.getElementById('animated-bg');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A8E6CF'];
+        const shapes = [];
+
+        for (let i = 0; i < 8; i++) {
+            shapes.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 60 + 30,
+                type: ['circle', 'square', 'triangle'][Math.floor(Math.random() * 3)],
+                color: colors[Math.floor(Math.random() * colors.length)],
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.01,
+                dx: (Math.random() - 0.5) * 0.3,
+                dy: (Math.random() - 0.5) * 0.3
+            });
+        }
+
+        function drawShape(shape) {
+            ctx.save();
+            ctx.translate(shape.x, shape.y);
+            ctx.rotate(shape.rotation);
+            ctx.fillStyle = shape.color;
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+
+            if (shape.type === 'circle') {
+                ctx.beginPath();
+                ctx.arc(0, 0, shape.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else if (shape.type === 'square') {
+                ctx.fillRect(-shape.size / 2, -shape.size / 2, shape.size, shape.size);
+                ctx.strokeRect(-shape.size / 2, -shape.size / 2, shape.size, shape.size);
+            } else if (shape.type === 'triangle') {
+                ctx.beginPath();
+                ctx.moveTo(0, -shape.size / 2);
+                ctx.lineTo(shape.size / 2, shape.size / 2);
+                ctx.lineTo(-shape.size / 2, shape.size / 2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            shapes.forEach(shape => {
+                shape.x += shape.dx;
+                shape.y += shape.dy;
+                shape.rotation += shape.rotationSpeed;
+
+                if (shape.x < -shape.size) shape.x = canvas.width + shape.size;
+                if (shape.x > canvas.width + shape.size) shape.x = -shape.size;
+                if (shape.y < -shape.size) shape.y = canvas.height + shape.size;
+                if (shape.y > canvas.height + shape.size) shape.y = -shape.size;
+
+                drawShape(shape);
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>

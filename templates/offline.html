@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff3333">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Offline - Local Home Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --accent: #ff3333;
+            --bg: #f5f5f5;
+            --text: #1a1a1a;
+            --border: 4px solid black;
+            --shadow: 8px 8px 0 black;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            padding-top: calc(24px + var(--safe-top));
+            padding-bottom: calc(24px + var(--safe-bottom));
+            text-align: center;
+        }
+
+        .offline-card {
+            background: white;
+            border: var(--border);
+            box-shadow: var(--shadow);
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 24px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.95); }
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .accent {
+            color: var(--accent);
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: #fff3f3;
+            border: 2px solid var(--accent);
+            margin-bottom: 24px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: blink 1.5s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .retry-button {
+            display: block;
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--accent);
+            color: white;
+            border: var(--border);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .retry-button:hover {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .retry-button:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .cached-actions {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px dashed #ccc;
+        }
+
+        .cached-actions h3 {
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            color: #666;
+        }
+
+        .quick-action {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 2px solid black;
+            margin-bottom: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-action:hover {
+            background: #f0f0f0;
+        }
+
+        .quick-action-icon {
+            font-size: 1.5rem;
+        }
+
+        .quick-action-text {
+            text-align: left;
+        }
+
+        .quick-action-title {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .quick-action-desc {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 480px) {
+            .offline-card {
+                padding: 24px;
+                box-shadow: 4px 4px 0 black;
+            }
+
+            .offline-icon {
+                font-size: 3rem;
+            }
+
+            h1 {
+                font-size: 1.25rem;
+            }
+        }
+
+        /* Touch feedback */
+        @media (hover: none) {
+            .retry-button:active,
+            .quick-action:active {
+                transform: scale(0.98);
+                opacity: 0.9;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-card">
+        <div class="offline-icon">📡</div>
+        
+        <h1>You're <span class="accent">Offline</span></h1>
+        
+        <p>
+            Your home agent is currently unavailable. 
+            Check your network connection and try again.
+        </p>
+        
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span>Waiting for connection...</span>
+        </div>
+        
+        <button class="retry-button" onclick="retryConnection()">
+            RETRY CONNECTION
+        </button>
+        
+        <div class="cached-actions">
+            <h3>CACHED QUICK ACTIONS</h3>
+            
+            <div class="quick-action" onclick="queueAction('lights_on')">
+                <span class="quick-action-icon">💡</span>
+                <div class="quick-action-text">
+                    <div class="quick-action-title">Turn On Lights</div>
+                    <div class="quick-action-desc">Will execute when online</div>
+                </div>
+            </div>
+            
+            <div class="quick-action" onclick="queueAction('lights_off')">
+                <span class="quick-action-icon">🌙</span>
+                <div class="quick-action-text">
+                    <div class="quick-action-title">Turn Off Lights</div>
+                    <div class="quick-action-desc">Will execute when online</div>
+                </div>
+            </div>
+            
+            <div class="quick-action" onclick="queueAction('lock_all')">
+                <span class="quick-action-icon">🔒</span>
+                <div class="quick-action-text">
+                    <div class="quick-action-title">Lock All Doors</div>
+                    <div class="quick-action-desc">Will execute when online</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check connection status periodically
+        let checkInterval;
+
+        function startConnectionCheck() {
+            checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/api/health', { 
+                        method: 'HEAD',
+                        cache: 'no-store'
+                    });
+                    if (response.ok) {
+                        // Connection restored - reload page
+                        clearInterval(checkInterval);
+                        window.location.reload();
+                    }
+                } catch (e) {
+                    // Still offline
+                }
+            }, 5000);
+        }
+
+        function retryConnection() {
+            const button = document.querySelector('.retry-button');
+            button.textContent = 'CHECKING...';
+            button.disabled = true;
+            
+            fetch('/api/health', { cache: 'no-store' })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/dashboard';
+                    } else {
+                        throw new Error('Not OK');
+                    }
+                })
+                .catch(() => {
+                    button.textContent = 'STILL OFFLINE';
+                    setTimeout(() => {
+                        button.textContent = 'RETRY CONNECTION';
+                        button.disabled = false;
+                    }, 2000);
+                });
+        }
+
+        // Queue action for background sync
+        async function queueAction(actionType) {
+            const actions = {
+                'lights_on': { url: '/api/scenes/lights_on', method: 'POST' },
+                'lights_off': { url: '/api/scenes/lights_off', method: 'POST' },
+                'lock_all': { url: '/api/scenes/lock_all', method: 'POST' }
+            };
+
+            const action = actions[actionType];
+            if (!action) return;
+
+            try {
+                // Try to open IndexedDB and store pending action
+                const db = await openDB();
+                const tx = db.transaction('pendingActions', 'readwrite');
+                const store = tx.objectStore('pendingActions');
+                
+                await store.add({
+                    ...action,
+                    timestamp: Date.now(),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                // Request background sync
+                if ('serviceWorker' in navigator && 'sync' in window.registration) {
+                    await navigator.serviceWorker.ready;
+                    await registration.sync.register('sync-device-actions');
+                }
+
+                // Visual feedback
+                const element = event.currentTarget;
+                const originalHTML = element.innerHTML;
+                element.innerHTML = '<span style="color: #00cc00;">✓ Queued for sync</span>';
+                setTimeout(() => {
+                    element.innerHTML = originalHTML;
+                }, 2000);
+
+            } catch (error) {
+                console.log('Failed to queue action:', error);
+                alert('Could not queue action. Please try again when online.');
+            }
+        }
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('HomeAgentDB', 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('pendingActions')) {
+                        db.createObjectStore('pendingActions', { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                    }
+                };
+            });
+        }
+
+        // Listen for online event
+        window.addEventListener('online', () => {
+            window.location.reload();
+        });
+
+        // Start checking
+        startConnectionCheck();
+    </script>
+    <!-- Theme Manager (P5) -->
+    <script src="/static/js/theme-manager.js"></script>
+</body>
+</html>

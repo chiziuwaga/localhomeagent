@@ -1,0 +1,165 @@
+# Local Home Agent Configuration
+# Copy this file to config.yaml and customize
+
+# ===========================================
+# NETWORK SETTINGS
+# ===========================================
+network:
+  host: "0.0.0.0"
+  port: 8000
+  # Enable HTTPS (recommended for production)
+  https:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+  # Allowed origins for CORS
+  cors_origins:
+    - "*"  # Restrict in production
+
+# ===========================================
+# SECURITY SETTINGS
+# ===========================================
+security:
+  # Admin PIN for 2FA (4 digits, change this!)
+  admin_pin: "1234"
+  
+  # Session timeout (minutes)
+  session_timeout: 30
+  
+  # High-risk actions requiring verification
+  high_risk_actions:
+    - door_unlock
+    - alarm_control
+    - camera_view
+    - garage_open
+    - lock_all
+  
+  # WiFi security recommendation
+  wifi_minimum: "WPA2"
+  
+  # Rate limiting (requests per minute per IP)
+  rate_limit:
+    enabled: true
+    requests_per_minute: 60
+    burst: 10
+
+# ===========================================
+# HOME ASSISTANT INTEGRATION
+# ===========================================
+home_assistant:
+  # Home Assistant URL (http://homeassistant.local:8123)
+  url: ""
+  # Long-lived access token from HA
+  token: ""
+  # Auto-discover devices on startup
+  auto_discover: true
+  # Device polling interval (seconds)
+  poll_interval: 30
+
+# ===========================================
+# LLM CONFIGURATION
+# ===========================================
+llm:
+  # Primary: local LLM (Ollama or LM Studio)
+  local:
+    # Provider: "ollama" or "lmstudio"
+    provider: "ollama"
+    # Model to use
+    model: "llama3.2:3b"
+    # Ollama endpoint
+    ollama_url: "http://localhost:11434"
+    # LM Studio endpoint
+    lmstudio_url: "http://localhost:1234"
+  
+  # Fallback: cloud LLM (only when local fails)
+  cloud:
+    enabled: false
+    provider: "openai"  # or "together" or "kimi"
+    api_key: ""
+    model: "gpt-4o-mini"
+    # Scrub personal data before sending to cloud
+    scrub_pii: true
+
+# ===========================================
+# IOT PROTOCOLS (via Home Assistant)
+# ===========================================
+iot_protocols:
+  # These are handled by Home Assistant, not directly
+  # Just for documentation/compatibility checking
+  supported_via_ha:
+    - zigbee
+    - zwave
+    - matter
+    - mqtt
+    - wifi
+    - bluetooth
+    - thread
+  
+  # Direct device control (bypasses HA)
+  direct_control:
+    enabled: false
+    # Only use if devices don't work via HA
+    devices: []
+
+# ===========================================
+# AUTOMATION SETTINGS
+# ===========================================
+automations:
+  # Enable automation engine
+  enabled: true
+  
+  # Max automations per user
+  max_per_user: 20
+  
+  # Default delay between triggers (seconds)
+  debounce: 5
+  
+  # Schedule check interval (seconds)
+  scheduler_interval: 60
+
+# ===========================================
+# LOGGING
+# ===========================================
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/agent.log"
+  max_size_mb: 10
+  backup_count: 5
+  
+  # Audit logging for security events
+  audit:
+    enabled: true
+    file: "logs/audit.log"
+
+# ===========================================
+# USERS & ROLES
+# ===========================================
+roles:
+  admin:
+    description: "Full access to all features"
+    permissions:
+      - "*"
+  
+  resident:
+    description: "Standard resident access"
+    permissions:
+      - device_control
+      - scene_activate
+      - chat
+      - view_cameras
+    restricted:
+      - alarm_control
+      - lock_management
+      - user_management
+  
+  guest:
+    description: "Limited temporary access"
+    permissions:
+      - device_control_limited
+      - chat
+    restricted:
+      - camera_view
+      - lock_control
+      - scene_activate
+    # Guest access expires after (hours)
+    expiry_hours: 24

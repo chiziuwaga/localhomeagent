@@ -1,0 +1,545 @@
+/**
+ * Local Home Agent - Callable UI Styles
+ * Dark mode neo-brutalist design matching web platform
+ */
+
+/* ============================================
+   Callable UI Base Styles
+   ============================================ */
+.callable-section-title {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    margin-bottom: var(--space-sm);
+    letter-spacing: 1px;
+}
+
+/* ============================================
+   Device Card
+   ============================================ */
+.callable-device-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md);
+    background: var(--color-surface);
+    border: var(--border-md) solid var(--color-border);
+    margin-bottom: var(--space-sm);
+}
+
+.callable-device-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.callable-device-icon {
+    font-size: 1.5rem;
+}
+
+.callable-device-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.callable-device-text strong {
+    color: var(--color-text);
+}
+
+.callable-device-type {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.callable-device-toggle {
+    width: 70px;
+    height: 36px;
+    background: var(--color-bg);
+    border: var(--border-md) solid var(--color-border);
+    font-family: var(--font-family);
+    font-weight: bold;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--duration-fast);
+}
+
+.callable-device-toggle.on {
+    background: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+.callable-device-toggle:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* Device Grid */
+.callable-device-list {
+    margin: var(--space-md) 0;
+}
+
+.callable-device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-sm);
+}
+
+@media (max-width: 479px) {
+    .callable-device-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   Energy Meter
+   ============================================ */
+.callable-energy-meter {
+    padding: var(--space-md);
+    background: var(--color-surface);
+    border: var(--border-md) solid var(--color-border);
+    margin: var(--space-md) 0;
+}
+
+.callable-energy-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.callable-energy-icon {
+    font-size: 1.25rem;
+}
+
+.callable-energy-label {
+    flex: 1;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: var(--font-size-sm);
+}
+
+.callable-energy-value {
+    font-size: var(--font-size-xl);
+    font-weight: bold;
+    color: var(--color-accent);
+}
+
+.callable-energy-bar {
+    height: 24px;
+    background: var(--color-bg);
+    border: var(--border-sm) solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+}
+
+.callable-energy-fill {
+    height: 100%;
+    transition: width var(--duration-normal), background var(--duration-normal);
+}
+
+.callable-energy-fill.energy-low {
+    background: var(--color-success);
+}
+
+.callable-energy-fill.energy-medium {
+    background: var(--color-warning);
+}
+
+.callable-energy-fill.energy-high {
+    background: #ff9900;
+}
+
+.callable-energy-fill.energy-critical {
+    background: var(--color-danger);
+    animation: pulse 1s infinite;
+}
+
+.callable-energy-thresholds {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+/* ============================================
+   Action Confirmation
+   ============================================ */
+.callable-action-confirm {
+    background: var(--color-surface);
+    border: var(--border-lg) solid var(--color-warning);
+    margin: var(--space-md) 0;
+    overflow: hidden;
+}
+
+.callable-confirm-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-warning);
+    color: black;
+    font-weight: bold;
+}
+
+.callable-confirm-icon {
+    font-size: 1.25rem;
+}
+
+.callable-confirm-body {
+    padding: var(--space-md);
+}
+
+.callable-confirm-message {
+    margin-bottom: var(--space-md);
+    color: var(--color-text);
+}
+
+.callable-confirm-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.callable-confirm-actions {
+    display: flex;
+    gap: 0;
+    border-top: var(--border-sm) solid var(--color-border);
+}
+
+.callable-confirm-actions .callable-btn {
+    flex: 1;
+    border: none;
+    border-radius: 0;
+}
+
+.callable-confirm-actions .callable-btn:first-child {
+    border-right: var(--border-sm) solid var(--color-border);
+}
+
+.callable-action-confirm.processing {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.callable-confirm-result {
+    padding: var(--space-lg);
+    text-align: center;
+    font-weight: bold;
+}
+
+.callable-confirm-result.approve {
+    background: var(--color-success);
+    color: white;
+}
+
+.callable-confirm-result.deny {
+    background: var(--color-danger);
+    color: white;
+}
+
+/* ============================================
+   Scene Selector
+   ============================================ */
+.callable-scene-selector {
+    margin: var(--space-md) 0;
+}
+
+.callable-scene-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-sm);
+}
+
+.callable-scene-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+    background: var(--color-surface);
+    border: var(--border-md) solid var(--color-border);
+    font-family: var(--font-family);
+    cursor: pointer;
+    transition: all var(--duration-fast);
+    min-height: var(--touch-target);
+}
+
+.callable-scene-btn:hover {
+    border-color: var(--color-accent);
+}
+
+.callable-scene-btn.activated {
+    background: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+.callable-scene-icon {
+    font-size: 1.5rem;
+}
+
+.callable-scene-name {
+    font-size: var(--font-size-sm);
+    text-transform: uppercase;
+    color: var(--color-text);
+}
+
+/* ============================================
+   Verification Challenge
+   ============================================ */
+.callable-verification {
+    background: var(--color-surface);
+    border: var(--border-lg) solid var(--color-accent);
+    margin: var(--space-md) 0;
+    overflow: hidden;
+}
+
+.callable-verify-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-accent);
+    color: white;
+    font-weight: bold;
+}
+
+.callable-verify-icon {
+    font-size: 1.25rem;
+}
+
+.callable-verify-message {
+    padding: var(--space-md);
+    color: var(--color-text);
+    border-bottom: var(--border-sm) solid var(--color-border);
+}
+
+.callable-verify-input {
+    display: flex;
+    padding: var(--space-md);
+    gap: var(--space-sm);
+}
+
+.callable-input {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    min-height: var(--touch-target);
+    background: var(--color-bg);
+    border: var(--border-md) solid var(--color-border);
+    font-family: var(--font-family);
+    font-size: var(--font-size-lg);
+    color: var(--color-text);
+    text-align: center;
+    letter-spacing: 4px;
+}
+
+.callable-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.callable-verify-timeout {
+    padding: var(--space-sm) var(--space-md);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    background: var(--color-bg);
+}
+
+.callable-verification.processing {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.callable-verify-result {
+    padding: var(--space-lg);
+    text-align: center;
+    font-weight: bold;
+}
+
+.callable-verify-result.success {
+    background: var(--color-success);
+    color: white;
+}
+
+/* ============================================
+   Status Card
+   ============================================ */
+.callable-status-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-surface);
+    border: var(--border-md) solid var(--color-border);
+    margin: var(--space-sm) 0;
+}
+
+.callable-status-icon {
+    font-size: 2rem;
+}
+
+.callable-status-content {
+    flex: 1;
+}
+
+.callable-status-value {
+    font-size: var(--font-size-xl);
+    font-weight: bold;
+    color: var(--color-accent);
+}
+
+.callable-status-title {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+
+.callable-status-subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-muted);
+}
+
+.callable-status-card.status-success .callable-status-value {
+    color: var(--color-success);
+}
+
+.callable-status-card.status-warning .callable-status-value {
+    color: var(--color-warning);
+}
+
+.callable-status-card.status-danger .callable-status-value {
+    color: var(--color-danger);
+}
+
+/* ============================================
+   Alert Banner
+   ============================================ */
+.callable-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    margin: var(--space-sm) 0;
+    border: var(--border-md) solid;
+}
+
+.callable-alert-info {
+    background: rgba(51, 153, 255, 0.1);
+    border-color: var(--color-info);
+}
+
+.callable-alert-warning {
+    background: rgba(255, 204, 0, 0.1);
+    border-color: var(--color-warning);
+}
+
+.callable-alert-error {
+    background: rgba(255, 51, 51, 0.1);
+    border-color: var(--color-danger);
+}
+
+.callable-alert-success {
+    background: rgba(0, 204, 0, 0.1);
+    border-color: var(--color-success);
+}
+
+.callable-alert-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.callable-alert-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.callable-alert-title {
+    color: var(--color-text);
+}
+
+.callable-alert-message {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.callable-alert-dismiss {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-xs);
+    font-size: 1rem;
+}
+
+.callable-alert-dismiss:hover {
+    color: var(--color-text);
+}
+
+/* ============================================
+   Shared Button Styles
+   ============================================ */
+.callable-btn {
+    padding: var(--space-sm) var(--space-md);
+    min-height: var(--touch-target);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: var(--border-md) solid var(--color-border);
+    font-family: var(--font-family);
+    font-weight: bold;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all var(--duration-fast);
+}
+
+.callable-btn:hover {
+    background: var(--color-surface-hover);
+}
+
+.callable-btn-accent {
+    background: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+.callable-btn-accent:hover {
+    background: var(--color-accent-light);
+}
+
+.callable-btn-success {
+    background: var(--color-success);
+    color: white;
+    border-color: var(--color-success);
+}
+
+.callable-btn-danger {
+    background: var(--color-danger);
+    color: white;
+    border-color: var(--color-danger);
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Touch feedback */
+@media (hover: none) {
+    .callable-device-toggle:active,
+    .callable-scene-btn:active,
+    .callable-btn:active {
+        transform: scale(0.98);
+        opacity: 0.9;
+    }
+}
