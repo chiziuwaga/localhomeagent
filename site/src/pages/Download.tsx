@@ -6,7 +6,8 @@ import {
   type ModelRecommendation,
 } from "../lib/hardwareDetection";
 
-const RELEASES_URL = "https://github.com/chiziuwaga/localhomeagent/releases/latest";
+const RELEASES_URL =
+  "https://github.com/chiziuwaga/localhomeagent/releases/latest";
 
 const OS_LABEL: Record<HardwareProfile["platform"]["os"], string> = {
   windows: "Windows",
@@ -31,7 +32,9 @@ export function Download() {
     }
   }, []);
 
-  const osLabel = profile ? OS_LABEL[profile.platform.os] : "your operating system";
+  const osLabel = profile
+    ? OS_LABEL[profile.platform.os]
+    : "your operating system";
 
   return (
     <section className="px-6 py-16 max-w-5xl mx-auto">
@@ -39,8 +42,9 @@ export function Download() {
         Download <span className="text-red-600">Local Home Agent</span>
       </h1>
       <p className="text-lg max-w-2xl mb-10">
-        We detected you're on <strong>{osLabel}</strong>. Grab the latest release,
-        run the installer, and the agent will pair itself with your coliving platform.
+        We detected you're on <strong>{osLabel}</strong>. Grab the latest
+        release, run the installer, and the agent will pair itself with your
+        coliving platform.
       </p>
 
       <div className="border-4 border-black p-6 shadow-brutal mb-10">
@@ -54,7 +58,8 @@ export function Download() {
           GitHub Releases &rarr;
         </a>
         <p className="mt-4 text-sm text-neutral-700">
-          Pre-built artifacts for Windows, macOS (Apple Silicon &amp; Intel), and Linux x86_64.
+          Pre-built artifacts for Windows, macOS (Apple Silicon &amp; Intel),
+          and Linux x86_64.
         </p>
       </div>
 
@@ -64,27 +69,35 @@ export function Download() {
         </h2>
         <p className="mb-4">
           The agent runs against{" "}
-          <a className="underline" href="https://ollama.com">Ollama</a> by default and falls
-          back to <a className="underline" href="https://lmstudio.ai">LM Studio</a>. Recommended
-          model based on your hardware:
+          <a className="underline" href="https://ollama.com">
+            Ollama
+          </a>{" "}
+          by default and falls back to{" "}
+          <a className="underline" href="https://lmstudio.ai">
+            LM Studio
+          </a>
+          . Recommended model based on your hardware:
         </p>
         {profile ? (
           <ul className="font-mono text-sm space-y-1">
             <li>
-              GPU: {profile.gpu.vendor} {profile.gpu.renderer} ({profile.gpu.tier})
+              GPU: {profile.gpu.vendor} {profile.gpu.renderer} (
+              {profile.gpu.tier})
             </li>
             <li>Estimated VRAM: {profile.gpu.estimatedVRAM} MB</li>
             <li>System RAM: {profile.memory.estimatedTotalRAM} GB</li>
             <li>CPU cores: {profile.cpu.cores}</li>
             {model && (
               <li className="pt-2">
-                <strong>Recommended:</strong> {model.name} &mdash; {model.size}, {model.ram}, {model.contextWindow}
+                <strong>Recommended:</strong> {model.name} &mdash; {model.size},{" "}
+                {model.ram}, {model.contextWindow}
               </li>
             )}
           </ul>
         ) : (
           <p className="font-mono text-sm">
-            Hardware detection unavailable in this browser &mdash; pick a model that matches your VRAM.
+            Hardware detection unavailable in this browser &mdash; pick a model
+            that matches your VRAM.
           </p>
         )}
       </div>
@@ -94,9 +107,11 @@ export function Download() {
           Step 3 &mdash; Pair with your platform
         </h2>
         <p>
-          On first run, the agent will print a one-time pairing code. Paste it into Settings
-          &rarr; Agents on{" "}
-          <a className="underline" href="https://coliving.fixitforme.ai">coliving.fixitforme.ai</a>{" "}
+          On first run, the agent will print a one-time pairing code. Paste it
+          into Settings &rarr; Agents on{" "}
+          <a className="underline" href="https://coliving.fixitforme.ai">
+            coliving.fixitforme.ai
+          </a>{" "}
           and you're done.
         </p>
       </div>

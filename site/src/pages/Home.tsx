@@ -7,9 +7,10 @@ export function Home() {
           for <span className="text-red-600">co-living</span> operators.
         </h1>
         <p className="text-lg md:text-xl max-w-2xl mb-10">
-          Local Home Agent runs on the operator's own machine. It talks to local LLMs
-          (Ollama, LM Studio), drives a captive-portal Wi-Fi onboarding flow for guests,
-          and integrates with smart-home devices &mdash; all without sending data to the cloud.
+          Local Home Agent runs on the operator's own machine. It talks to local
+          LLMs (Ollama, LM Studio), drives a captive-portal Wi-Fi onboarding
+          flow for guests, and integrates with smart-home devices &mdash; all
+          without sending data to the cloud.
         </p>
         <div className="flex flex-wrap gap-4">
           <a
