@@ -3,8 +3,8 @@
 block_cipher = None
 
 a = Analysis(
-    ['app/main.py'],
-    pathex=[],
+    ['run.py'],
+    pathex=['.'],
     binaries=[],
     datas=[
         ('templates', 'templates'),
@@ -12,6 +12,8 @@ a = Analysis(
         ('config', 'config'),
     ],
     hiddenimports=[
+        'app',
+        'app.main',
         'uvicorn.logging',
         'uvicorn.loops',
         'uvicorn.loops.auto',
