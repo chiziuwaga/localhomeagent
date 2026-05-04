@@ -4,65 +4,69 @@ Tests for the first-run setup gate + credential rotation.
 These verify:
   - while first_run_complete is false the gate redirects HTML routes to /setup
     and locks /api/* endpoints (other than /api/setup/*, /api/health,
-    /api/system/check)
+    /api/system/check, /static/*, /favicon)
   - POST /api/setup/credentials with a wrong bootstrap PIN is rejected
   - the happy-path call sets credentials, persists to ~/.local-home-agent
     and flips the gate so the dashboard becomes reachable
   - POST /api/admin/set-pin and /api/admin/rotate-passphrase persist the new
     values to disk
+
+The fixture mutates ``app.main``'s module globals via ``monkeypatch`` rather
+than reimporting the module — that keeps function references already imported
+by other test modules (``test_system_check``, ``test_platform_pairing``) valid.
 """
 
 from __future__ import annotations
 
-import importlib
-import json
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# Test-only secrets so app.main can import (it requires PASSPHRASE +
+# ADMIN_PIN at module-import time). Set BEFORE importing.
+os.environ.setdefault("PASSPHRASE", "bootstrap-passphrase-do-not-use")
+os.environ.setdefault("ADMIN_PIN", "12345678")
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-do-not-use")
+
+from app import main as app_main  # noqa: E402
+from app import secret_store  # noqa: E402
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+BOOTSTRAP_PIN = "12345678"
 
 
 @pytest.fixture
 def fresh_app(monkeypatch, tmp_path):
     """
-    Boot the app with a fresh ``~/.local-home-agent`` rooted in a tempdir, no
-    prior secrets, and a known bootstrap PIN. ``monkeypatch`` re-points
-    ``Path.home()`` so the secret_store writes inside the tempdir.
+    Hand each test a clean ``~/.local-home-agent`` (in tmp_path), a known
+    bootstrap PIN hash, and ``_FIRST_RUN_COMPLETE = False``. Monkeypatch
+    undoes everything between tests.
     """
     fake_home = tmp_path / "home"
     fake_home.mkdir()
-
-    # Force secret_store to read/write inside tmp_path
-    monkeypatch.setenv("HOME", str(fake_home))
-    monkeypatch.setenv("USERPROFILE", str(fake_home))
     monkeypatch.setattr(Path, "home", lambda: fake_home)
 
-    # Test-only env so app.main can import (it requires PASSPHRASE + ADMIN_PIN
-    # at module import time).
-    monkeypatch.setenv("PASSPHRASE", "bootstrap-passphrase-do-not-use")
-    monkeypatch.setenv("ADMIN_PIN", "12345678")
-    monkeypatch.setenv("JWT_SECRET", "test-jwt-secret-do-not-use")
+    # Reset app.main globals to "fresh first-run" state
+    monkeypatch.setattr(app_main, "_FIRST_RUN_COMPLETE", False)
+    monkeypatch.setattr(
+        app_main, "ADMIN_PIN_HASH", app_main.hash_pin(BOOTSTRAP_PIN)
+    )
+    monkeypatch.setattr(
+        app_main, "passphrase_swarm",
+        app_main.create_passphrase_swarm("bootstrap-passphrase"),
+    )
 
-    # Drop any cached import of app.main + secret_store so the module-level
-    # state (FIRST_RUN_COMPLETE, ADMIN_PIN_HASH, passphrase_swarm) re-reads
-    # the freshly-monkeypatched home.
-    for mod in list(sys.modules):
-        if mod.startswith("app"):
-            del sys.modules[mod]
-
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    main = importlib.import_module("app.main")
-    secret_store = importlib.import_module("app.secret_store")
-
-    from fastapi.testclient import TestClient
-
-    yield {
-        "main": main,
+    return {
+        "client": TestClient(app_main.app, follow_redirects=False),
+        "main": app_main,
         "secret_store": secret_store,
-        "client": TestClient(main.app, follow_redirects=False),
-        "bootstrap_pin": "12345678",
+        "bootstrap_pin": BOOTSTRAP_PIN,
+        "home": fake_home,
     }
 
 
@@ -84,8 +88,6 @@ def test_health_open_during_first_run(fresh_app):
 
 
 def test_protected_api_locked_during_first_run(fresh_app):
-    # /api/admin/permissions normally requires admin auth — the gate should
-    # 423-Lock it before auth even runs.
     r = fresh_app["client"].get("/api/admin/permissions")
     assert r.status_code == 423
 
@@ -104,7 +106,6 @@ def test_wrong_bootstrap_pin_rejected(fresh_app):
 
 
 def test_pin_validation_rejects_bad_input(fresh_app):
-    # Too short
     r = fresh_app["client"].post(
         "/api/setup/credentials",
         json={
@@ -114,7 +115,7 @@ def test_pin_validation_rejects_bad_input(fresh_app):
         },
     )
     assert r.status_code == 400
-    # Non-digit
+
     r = fresh_app["client"].post(
         "/api/setup/credentials",
         json={
@@ -138,7 +139,7 @@ def test_passphrase_validation_min_length(fresh_app):
     assert r.status_code == 400
 
 
-def test_setup_happy_path_persists_and_unlocks_gate(fresh_app):
+def test_setup_happy_path_persists_and_locks_endpoint(fresh_app):
     r = fresh_app["client"].post(
         "/api/setup/credentials",
         json={
@@ -150,13 +151,12 @@ def test_setup_happy_path_persists_and_unlocks_gate(fresh_app):
     assert r.status_code == 200, r.text
     assert r.json()["success"] is True
 
-    # Persisted to disk
     cfg = fresh_app["secret_store"].read_secrets()
     assert cfg["admin_pin"] == "987654"
     assert cfg["passphrase"] == "rotated-passphrase-yes"
     assert cfg["first_run_complete"] is True
 
-    # Setup endpoint is now locked
+    # Endpoint locked once first-run completes
     r2 = fresh_app["client"].post(
         "/api/setup/credentials",
         json={
@@ -169,7 +169,6 @@ def test_setup_happy_path_persists_and_unlocks_gate(fresh_app):
 
 
 def test_set_pin_persists_to_disk(fresh_app):
-    # Complete first-run first
     fresh_app["client"].post(
         "/api/setup/credentials",
         json={
@@ -178,29 +177,22 @@ def test_set_pin_persists_to_disk(fresh_app):
             "new_passphrase": "first-run-passphrase",
         },
     )
-    # The set_admin_pin route is gated by Depends(require_admin) — invoke the
-    # underlying logic directly with a fake admin caller so we don't need to
-    # build a real cookie session inside the test.
     main = fresh_app["main"]
 
     class _FakeUser:
         user_id = "admin"
         role = "admin"
 
-    req = main.SetPinRequest(current_pin="111111", new_pin="222222")
-
     class _FakeRequest:
         class client:
             host = "127.0.0.1"
 
+    req = main.SetPinRequest(current_pin="111111", new_pin="222222")
     import asyncio
-
     result = asyncio.run(
         main.set_admin_pin(req, _FakeRequest(), _FakeUser())
     )
     assert result == {"success": True, "message": "PIN updated successfully"}
-
-    # Persisted
     cfg = fresh_app["secret_store"].read_secrets()
     assert cfg["admin_pin"] == "222222"
 
@@ -228,7 +220,6 @@ def test_rotate_passphrase_persists_to_disk(fresh_app):
         current_pin="111111", new_passphrase="rotated-passphrase-13"
     )
     import asyncio
-
     result = asyncio.run(
         main.rotate_passphrase(req, _FakeRequest(), _FakeUser())
     )
