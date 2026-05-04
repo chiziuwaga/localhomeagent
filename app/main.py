@@ -1204,8 +1204,18 @@ async def setup_wizard(request: Request):
 @app.get("/admin-guide", response_class=HTMLResponse)
 async def admin_guide(request: Request):
     """
-    Admin guide for WiFi setup and resident onboarding
+    Admin guide for WiFi setup and resident onboarding.
+
+    Login-gated — only admin/operator sessions may read this page. The guide
+    contains operator-only setup instructions (PowerShell firewall commands,
+    network IP discovery, resident onboarding) which we don't want anonymous
+    LAN visitors browsing.
     """
+    from .auth import verify_token as _vt
+    token = request.cookies.get("lha_session")
+    user = _vt(token) if token else None
+    if not user or user.role not in ("admin", "operator"):
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("admin-guide.html", {
         "request": request
     })
@@ -1299,9 +1309,18 @@ async def validate_access_token(token: str):
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """
-    Main dashboard for home management
-    Uses enhanced Neo-Brutalist + Swiss design template (P5)
+    Main dashboard for home management.
+
+    Login-gated — admin/operator only. Anyone else (resident/guest/anon)
+    is bounced back to the role-aware landing at /, which redirects them
+    to the surface they actually have access to.
+    Uses enhanced Neo-Brutalist + Swiss design template (P5).
     """
+    from .auth import verify_token as _vt
+    token = request.cookies.get("lha_session")
+    user = _vt(token) if token else None
+    if not user or user.role not in ("admin", "operator"):
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("dashboard-enhanced.html", {
         "request": request,
         "home_name": data_store.settings["home_name"],
@@ -1312,8 +1331,17 @@ async def dashboard(request: Request):
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_interface(request: Request):
     """
-    Chat interface for AI agent interaction
+    Chat interface for AI agent interaction.
+
+    Login-gated — any authenticated role may chat with the assistant, but
+    anonymous visitors are bounced to the landing page so they can't
+    silently exercise the LLM.
     """
+    from .auth import verify_token as _vt
+    token = request.cookies.get("lha_session")
+    user = _vt(token) if token else None
+    if not user:
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("chat.html", {
         "request": request
     })
@@ -1371,8 +1399,16 @@ async def guest_page(request: Request):
 @app.get("/residents", response_class=HTMLResponse)
 async def residents_chat(request: Request):
     """
-    Person-to-person chat interface for residents
+    Person-to-person chat interface for residents.
+
+    Login-gated — admin/operator/resident only. Guests and anonymous
+    visitors don't belong on the resident peer-chat surface.
     """
+    from .auth import verify_token as _vt
+    token = request.cookies.get("lha_session")
+    user = _vt(token) if token else None
+    if not user or user.role not in ("admin", "operator", "resident"):
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("residents.html", {
         "request": request
     })
@@ -1380,8 +1416,17 @@ async def residents_chat(request: Request):
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     """
-    Settings page for configuration (F4.2.6, F4.2.7)
+    Settings page for configuration (F4.2.6, F4.2.7).
+
+    Login-gated — admin/operator only. Settings expose security knobs
+    (passphrase rotation, guest PIN epoch, integrations) that nobody else
+    has any business reading.
     """
+    from .auth import verify_token as _vt
+    token = request.cookies.get("lha_session")
+    user = _vt(token) if token else None
+    if not user or user.role not in ("admin", "operator"):
+        return RedirectResponse(url="/", status_code=302)
     return templates.TemplateResponse("settings.html", {
         "request": request,
         "settings": data_store.settings
