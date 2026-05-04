@@ -79,6 +79,7 @@ from .auth import (
     get_current_user, require_admin, require_operator_or_admin,
     AuthenticatedUser, create_token, hash_pin, verify_pin,
 )
+from . import secret_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -116,6 +117,40 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# First-run gate: until the user picks their own PIN + passphrase, redirect
+# every non-static / non-setup HTML request to /setup. APIs that the wizard
+# itself needs to call (/api/setup/*, /api/health, /api/system/check) stay
+# open; everything else returns 423 Locked so a curious browser tab can't
+# poke the dashboard before credentials are configured.
+@app.middleware("http")
+async def first_run_gate(request: Request, call_next):
+    if _FIRST_RUN_COMPLETE:
+        return await call_next(request)
+    path = request.url.path
+    allowed_prefixes = (
+        "/setup",
+        "/static/",
+        "/api/setup/",
+        "/api/health",
+        "/api/system/check",
+        "/favicon",
+    )
+    if path == "/" or path == "":
+        return RedirectResponse(url="/setup", status_code=307)
+    if any(path.startswith(p) for p in allowed_prefixes):
+        return await call_next(request)
+    # Everything else is locked until first-run completes
+    if path.startswith("/api/"):
+        return JSONResponse(
+            status_code=423,
+            content={
+                "success": False,
+                "error": "First-run setup not complete. Visit /setup.",
+            },
+        )
+    return RedirectResponse(url="/setup", status_code=307)
 
 # Mount static files and templates
 static_path = os.path.join(os.path.dirname(__file__), "..", "static")
@@ -220,6 +255,11 @@ if not _raw_pin:
     )
 ADMIN_PIN_HASH = hash_pin(_raw_pin)
 del _raw_pin  # Don't keep raw PIN in memory
+
+# Desktop-binary first-run flag — true once the user has chosen their own
+# PIN + passphrase via /setup. While false, all HTML routes are redirected
+# to /setup and only /api/setup/* + /static/* + /api/health are reachable.
+_FIRST_RUN_COMPLETE = secret_store.is_first_run_complete()
 
 # --- Login endpoint: issues JWT tokens after passphrase verification ---
 @app.post("/api/auth/login")
@@ -2472,6 +2512,21 @@ class SetPinRequest(BaseModel):
     current_pin: str
     new_pin: str
 
+def _validate_pin(pin: str) -> Optional[str]:
+    """Returns an error message if invalid, else None."""
+    if not pin or not pin.isdigit():
+        return "PIN must be digits only"
+    if len(pin) < 4 or len(pin) > 8:
+        return "PIN must be 4-8 digits"
+    return None
+
+
+def _validate_passphrase(passphrase: str) -> Optional[str]:
+    if not passphrase or len(passphrase) < 12:
+        return "Passphrase must be at least 12 characters"
+    return None
+
+
 @app.post("/api/admin/set-pin")
 async def set_admin_pin(req: SetPinRequest, request: Request, _caller: AuthenticatedUser = Depends(require_admin)):
     """
@@ -2492,17 +2547,116 @@ async def set_admin_pin(req: SetPinRequest, request: Request, _caller: Authentic
             content={"success": False, "error": "Current PIN is incorrect"}
         )
 
-    # Validate new PIN (4-8 digits)
-    if len(req.new_pin) < 4 or len(req.new_pin) > 8 or not req.new_pin.isdigit():
-        return JSONResponse(
-            status_code=400,
-            content={"success": False, "error": "PIN must be 4-8 digits"}
-        )
+    err = _validate_pin(req.new_pin)
+    if err:
+        return JSONResponse(status_code=400, content={"success": False, "error": err})
 
     ADMIN_PIN_HASH = hash_pin(req.new_pin)
-    logger.info("Admin PIN updated (bcrypt hash)")
+    secret_store.update(admin_pin=req.new_pin)
+    logger.info("Admin PIN updated (bcrypt hash + persisted)")
 
     return {"success": True, "message": "PIN updated successfully"}
+
+
+# ----------------------------------------------------------------------------
+# First-run setup: caller authenticates with the bootstrap PIN, then chooses
+# their own PIN + passphrase. Locked once first_run_complete is true.
+# ----------------------------------------------------------------------------
+
+class FirstRunSetupRequest(BaseModel):
+    bootstrap_pin: str  # the auto-generated PIN from FIRST_RUN_CREDENTIALS.txt
+    new_pin: str
+    new_passphrase: str
+
+
+@app.post("/api/setup/credentials")
+async def setup_credentials(req: FirstRunSetupRequest, request: Request):
+    """
+    First-run only: replace the bootstrap PIN + passphrase with the user's
+    chosen values. Available only while first_run_complete is false.
+    """
+    global ADMIN_PIN_HASH, passphrase_swarm, _FIRST_RUN_COMPLETE
+
+    if _FIRST_RUN_COMPLETE:
+        return JSONResponse(
+            status_code=403,
+            content={"success": False, "error": "First-run setup is already complete. Use /api/admin/set-pin or /api/admin/rotate-passphrase to rotate credentials."},
+        )
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        return JSONResponse(status_code=429, content={"success": False, "error": "Too many attempts."})
+
+    if not verify_pin(req.bootstrap_pin, ADMIN_PIN_HASH):
+        _record_attempt(client_ip)
+        return JSONResponse(
+            status_code=403,
+            content={"success": False, "error": "Bootstrap PIN is incorrect. See FIRST_RUN_CREDENTIALS.txt in your home folder under .local-home-agent."},
+        )
+
+    pin_err = _validate_pin(req.new_pin)
+    if pin_err:
+        return JSONResponse(status_code=400, content={"success": False, "error": pin_err})
+
+    pass_err = _validate_passphrase(req.new_passphrase)
+    if pass_err:
+        return JSONResponse(status_code=400, content={"success": False, "error": pass_err})
+
+    ADMIN_PIN_HASH = hash_pin(req.new_pin)
+    passphrase_swarm = create_passphrase_swarm(req.new_passphrase)
+    secret_store.update(
+        admin_pin=req.new_pin,
+        passphrase=req.new_passphrase,
+        first_run_complete=True,
+    )
+    _FIRST_RUN_COMPLETE = True
+    # Remove the bootstrap credentials file; it no longer matches reality.
+    creds = secret_store.config_dir() / "FIRST_RUN_CREDENTIALS.txt"
+    try:
+        if creds.exists():
+            creds.unlink()
+    except OSError:
+        pass
+
+    logger.info("First-run setup complete: PIN + passphrase set by user")
+    return {"success": True, "message": "Setup complete. Reload the page to log in."}
+
+
+# ----------------------------------------------------------------------------
+# Ongoing passphrase rotation (admin-gated)
+# ----------------------------------------------------------------------------
+
+class RotatePassphraseRequest(BaseModel):
+    current_pin: str
+    new_passphrase: str
+
+
+@app.post("/api/admin/rotate-passphrase")
+async def rotate_passphrase(
+    req: RotatePassphraseRequest,
+    request: Request,
+    _caller: AuthenticatedUser = Depends(require_admin),
+):
+    """Admin-gated passphrase rotation. Persists to secret_store."""
+    global passphrase_swarm
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        return JSONResponse(status_code=429, content={"success": False, "error": "Too many attempts."})
+
+    if not verify_pin(req.current_pin, ADMIN_PIN_HASH):
+        _record_attempt(client_ip)
+        return JSONResponse(status_code=403, content={"success": False, "error": "Current PIN is incorrect"})
+
+    err = _validate_passphrase(req.new_passphrase)
+    if err:
+        return JSONResponse(status_code=400, content={"success": False, "error": err})
+
+    passphrase_swarm = create_passphrase_swarm(req.new_passphrase)
+    secret_store.update(passphrase=req.new_passphrase)
+    logger.info("Passphrase rotated (in-memory + persisted)")
+
+    return {"success": True, "message": "Passphrase updated successfully"}
 
 
 # ========================================

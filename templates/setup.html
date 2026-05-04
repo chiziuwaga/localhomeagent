@@ -184,6 +184,7 @@
             <div class="progress-step" data-step="2"></div>
             <div class="progress-step" data-step="3"></div>
             <div class="progress-step" data-step="4"></div>
+            <div class="progress-step" data-step="5"></div>
         </div>
 
         <!-- Step 1: Welcome -->
@@ -192,16 +193,50 @@
             <p>This wizard will help you set up your Local Home Agent for managing your co-living space.</p>
             <p>You'll configure:</p>
             <ul style="margin-left: 24px; margin-bottom: 30px; line-height: 2;">
+                <li><strong>Admin PIN and passphrase</strong> (required first)</li>
                 <li>Home name and basic settings</li>
                 <li>Local AI model for offline operation</li>
                 <li>Home Assistant integration (optional)</li>
-                <li>User access and permissions</li>
             </ul>
             <button class="button" onclick="nextStep()">GET STARTED</button>
         </div>
 
-        <!-- Step 2: Basic Settings -->
+        <!-- Step 2: Security (mandatory PIN + passphrase) -->
         <div class="step" data-step="2">
+            <h2>Choose Your Admin Credentials</h2>
+            <p>The agent generated a temporary <strong>bootstrap PIN</strong> and saved it to
+                <code style="font-family:monospace;">~/.local-home-agent/FIRST_RUN_CREDENTIALS.txt</code>
+                in your home folder. Open that file once, then pick your own PIN and passphrase below.</p>
+
+            <div class="form-group">
+                <label for="bootstrap-pin">Bootstrap PIN (from FIRST_RUN_CREDENTIALS.txt)</label>
+                <input type="password" id="bootstrap-pin" inputmode="numeric" autocomplete="one-time-code" placeholder="8-digit bootstrap PIN">
+            </div>
+
+            <div class="form-group">
+                <label for="new-pin">Your New Admin PIN (4-8 digits)</label>
+                <input type="password" id="new-pin" inputmode="numeric" autocomplete="new-password" placeholder="e.g., 384921">
+            </div>
+
+            <div class="form-group">
+                <label for="confirm-pin">Confirm New PIN</label>
+                <input type="password" id="confirm-pin" inputmode="numeric" autocomplete="new-password">
+            </div>
+
+            <div class="form-group">
+                <label for="new-passphrase">Verification Passphrase (12+ characters)</label>
+                <input type="password" id="new-passphrase" autocomplete="new-password" placeholder="Used for high-risk action verification">
+            </div>
+
+            <div id="security-error" style="display:none; padding:12px; background:#fee; border:2px solid #c33; margin-bottom:16px; font-family:monospace; font-size:13px;"></div>
+            <div id="security-ok" style="display:none; padding:12px; background:#efe; border:2px solid #3c3; margin-bottom:16px; font-family:monospace; font-size:13px;"></div>
+
+            <button class="button-secondary button" onclick="prevStep()">BACK</button>
+            <button class="button" id="security-submit" onclick="submitSecurity()">SET CREDENTIALS</button>
+        </div>
+
+        <!-- Step 3: Basic Settings -->
+        <div class="step" data-step="3">
             <h2>Basic Settings</h2>
             <p>Let's start with some basic information about your home.</p>
 
@@ -229,8 +264,8 @@
             <button class="button" onclick="nextStep()">CONTINUE</button>
         </div>
 
-        <!-- Step 3: LLM Selection -->
-        <div class="step" data-step="3">
+        <!-- Step 4: LLM Selection -->
+        <div class="step" data-step="4">
             <h2>Choose AI Model</h2>
             <p>Select a local AI model to power your home agent. Recommended models are optimized for home automation.</p>
 
@@ -256,8 +291,8 @@
             <button class="button" onclick="nextStep()">CONTINUE</button>
         </div>
 
-        <!-- Step 4: Complete -->
-        <div class="step" data-step="4">
+        <!-- Step 5: Complete -->
+        <div class="step" data-step="5">
             <h2>Setup Complete!</h2>
             <p>Your Local Home Agent is ready to use. The selected AI model will download in the background.</p>
 
@@ -275,9 +310,15 @@
     <script>
         let currentStep = 1;
         let selectedModel = 'llama-3.2-1b';
+        let credentialsConfirmed = false;
 
         function nextStep() {
-            if (currentStep < 4) {
+            // Step 2 is mandatory: cannot advance without setting credentials
+            if (currentStep === 2 && !credentialsConfirmed) {
+                showSecurityError("Set your admin PIN and passphrase before continuing.");
+                return;
+            }
+            if (currentStep < 5) {
                 // Hide current step
                 document.querySelector(`.step[data-step="${currentStep}"]`).classList.remove('active');
                 document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.remove('active');
@@ -288,10 +329,68 @@
                 document.querySelector(`.progress-step[data-step="${currentStep}"]`).classList.add('active');
 
                 // Update summary on last step
-                if (currentStep === 4) {
+                if (currentStep === 5) {
                     document.getElementById('summary-home-name').textContent = document.getElementById('home-name').value;
                     document.getElementById('summary-model').textContent = selectedModel;
                 }
+            }
+        }
+
+        function showSecurityError(msg) {
+            const err = document.getElementById('security-error');
+            const ok = document.getElementById('security-ok');
+            err.textContent = msg;
+            err.style.display = 'block';
+            ok.style.display = 'none';
+        }
+
+        function showSecurityOk(msg) {
+            const err = document.getElementById('security-error');
+            const ok = document.getElementById('security-ok');
+            ok.textContent = msg;
+            ok.style.display = 'block';
+            err.style.display = 'none';
+        }
+
+        async function submitSecurity() {
+            const bootstrapPin = document.getElementById('bootstrap-pin').value.trim();
+            const newPin = document.getElementById('new-pin').value.trim();
+            const confirmPin = document.getElementById('confirm-pin').value.trim();
+            const newPassphrase = document.getElementById('new-passphrase').value;
+
+            if (!bootstrapPin) return showSecurityError("Enter the bootstrap PIN from FIRST_RUN_CREDENTIALS.txt.");
+            if (!/^\d{4,8}$/.test(newPin)) return showSecurityError("New PIN must be 4-8 digits.");
+            if (newPin !== confirmPin) return showSecurityError("PINs do not match.");
+            if (!newPassphrase || newPassphrase.length < 12) return showSecurityError("Passphrase must be at least 12 characters.");
+
+            const btn = document.getElementById('security-submit');
+            btn.disabled = true;
+            btn.textContent = "SETTING…";
+            try {
+                const r = await fetch('/api/setup/credentials', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        bootstrap_pin: bootstrapPin,
+                        new_pin: newPin,
+                        new_passphrase: newPassphrase,
+                    }),
+                });
+                const data = await r.json();
+                if (r.ok && data.success) {
+                    credentialsConfirmed = true;
+                    showSecurityOk("Credentials set. Continue to set up your home.");
+                    btn.textContent = "DONE";
+                    setTimeout(nextStep, 600);
+                } else {
+                    showSecurityError(data.error || "Could not set credentials.");
+                    btn.disabled = false;
+                    btn.textContent = "SET CREDENTIALS";
+                }
+            } catch (e) {
+                showSecurityError("Network error: " + e.message);
+                btn.disabled = false;
+                btn.textContent = "SET CREDENTIALS";
             }
         }
 
