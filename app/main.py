@@ -2318,24 +2318,80 @@ async def run_scene(scene_name: str, request: Request, caller: AuthenticatedUser
             content={"error": "Scene activation denied", "energy": result.total_energy}
         )
     
-    # Predefined scenes
-    scenes = {
-        "goodnight": {"action": "Turn off all lights, lock doors, set thermostat to 68°F"},
-        "away": {"action": "Turn off lights, lock doors, arm security"},
-        "home": {"action": "Unlock doors, turn on entry lights, disarm security"},
-        "movie": {"action": "Dim living room lights to 20%, close blinds"},
+    # Scene definitions: list of {device_type, target_state} steps that the
+    # scene will apply to every matching device in data_store.devices.
+    # Each step is also pushed to Home Assistant (if configured) via
+    # ha_client.control_device(); local-only mode still updates state so the
+    # UI reflects the change.
+    SCENES: Dict[str, List[Dict[str, Any]]] = {
+        "goodnight": [
+            {"device_type": "light", "state": "off"},
+            {"device_type": "lock", "state": "locked"},
+            {"device_type": "thermostat", "state": "on", "value": 68},
+        ],
+        "away": [
+            {"device_type": "light", "state": "off"},
+            {"device_type": "lock", "state": "locked"},
+            {"device_type": "alarm", "state": "armed"},
+        ],
+        "home": [
+            {"device_type": "lock", "state": "unlocked"},
+            {"device_type": "light", "state": "on", "tag": "entry"},
+            {"device_type": "alarm", "state": "disarmed"},
+        ],
+        "movie": [
+            {"device_type": "light", "state": "on", "value": 20, "tag": "living_room"},
+            {"device_type": "blind", "state": "closed", "tag": "living_room"},
+        ],
     }
-    
-    if scene_name not in scenes:
+
+    if scene_name not in SCENES:
         return JSONResponse(status_code=404, content={"error": "Scene not found"})
-    
-    logger.info(f"Scene '{scene_name}' activated for {caller.user_id}")
-    
+
+    actuated: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    ha_client = HomeAssistantClient()
+
+    for step in SCENES[scene_name]:
+        target_type = step["device_type"]
+        new_state = step["state"]
+        for device in data_store.devices:
+            if device.get("type") != target_type:
+                continue
+            # Optional tag filter (e.g. "entry" lights only)
+            tag = step.get("tag")
+            if tag and tag not in (device.get("tags") or []) and tag not in (device.get("name", "").lower()):
+                continue
+            try:
+                # Local state update — always succeeds, drives the UI even
+                # when no Home Assistant is configured.
+                device["state"] = new_state
+                if "value" in step:
+                    device["value"] = step["value"]
+                # Best-effort HA call. If HA isn't configured the call returns
+                # quickly without raising.
+                if ha_client.base_url:
+                    await ha_client.control_device(device["id"], new_state, step.get("value"))
+                actuated.append({
+                    "id": device["id"],
+                    "name": device.get("name"),
+                    "type": target_type,
+                    "new_state": new_state,
+                })
+            except Exception as exc:  # noqa: BLE001
+                errors.append({"device_id": device["id"], "error": str(exc)})
+
+    logger.info(
+        "Scene '%s' activated by %s: %d device(s) actuated, %d error(s)",
+        scene_name, caller.user_id, len(actuated), len(errors)
+    )
+
     return {
         "success": True,
         "scene": scene_name,
-        "actions": scenes[scene_name]["action"],
-        "energy": result.total_energy
+        "devices_actuated": actuated,
+        "errors": errors,
+        "energy": result.total_energy,
     }
 
 
@@ -2711,33 +2767,107 @@ class VoiceCommand(BaseModel):
 @app.post("/api/voice/command")
 async def process_voice_command(cmd: VoiceCommand):
     """
-    Process voice command and execute action
-    LA4.4: Voice command integration
+    Process voice command and actually actuate matching devices.
+    LA4.4: Voice command integration.
+
+    Was previously theatrical (returned hardcoded English without touching
+    data_store.devices or ha_client). Now iterates devices, mutates state,
+    best-effort calls Home Assistant, and returns the structured result so
+    the UI can update.
     """
     logger.info(f"Voice command: {cmd.command}")
-    
+
     action = cmd.action
     action_type = action.get("type")
     target = action.get("target")
-    
-    result = {"success": True, "command": cmd.command, "action": action_type}
-    
-    # Execute based on action type
+    desired_state = action.get("state")
+    value = action.get("value")
+
+    actuated: List[Dict[str, Any]] = []
+    errors: List[Dict[str, str]] = []
+    ha_client = HomeAssistantClient()
+
+    def _matches(device: Dict[str, Any], wanted_type: str, wanted_target: Optional[str]) -> bool:
+        if device.get("type") != wanted_type:
+            return False
+        if wanted_target in (None, "all", ""):
+            return True
+        # match by id, name (case-insensitive), or tag
+        target_lower = str(wanted_target).lower()
+        if device.get("id") == wanted_target:
+            return True
+        if target_lower in (device.get("name") or "").lower():
+            return True
+        return target_lower in (device.get("tags") or [])
+
+    async def _apply(devices_iter, new_state, new_value=None):
+        for device in devices_iter:
+            try:
+                device["state"] = new_state
+                if new_value is not None:
+                    device["value"] = new_value
+                if ha_client.base_url:
+                    await ha_client.control_device(device["id"], new_state, new_value)
+                actuated.append({
+                    "id": device["id"],
+                    "name": device.get("name"),
+                    "type": device.get("type"),
+                    "new_state": new_state,
+                })
+            except Exception as exc:  # noqa: BLE001
+                errors.append({"device_id": device["id"], "error": str(exc)})
+
     if action_type == "scene":
-        # Trigger scene
-        result["message"] = f"Scene '{target}' activated"
+        # Re-use the scene logic by direct dispatch — but we don't have the
+        # JWT context here, so just resolve the name and report. Caller
+        # should hit /api/scenes/{name} for full role-gated execution.
+        return {
+            "success": True,
+            "command": cmd.command,
+            "action": "scene",
+            "message": f"Voice intent recognised: scene '{target}'. Trigger via POST /api/scenes/{target} for execution.",
+        }
+
     elif action_type == "light_control":
-        state = "on" if action.get("state") else "off"
-        result["message"] = f"Turned {state} {target}"
+        new_state = "on" if desired_state else "off"
+        matches = [d for d in data_store.devices if _matches(d, "light", target)]
+        await _apply(matches, new_state, value)
+
     elif action_type == "door_lock":
-        result["message"] = "All doors locked"
+        matches = [d for d in data_store.devices if _matches(d, "lock", target)]
+        await _apply(matches, "locked")
+
+    elif action_type == "door_unlock":
+        matches = [d for d in data_store.devices if _matches(d, "lock", target)]
+        await _apply(matches, "unlocked")
+
     elif action_type == "thermostat_set":
-        value = action.get("value", 72)
-        result["message"] = f"Thermostat set to {value}°F"
+        new_temp = action.get("value", 72)
+        matches = [d for d in data_store.devices if _matches(d, "thermostat", target)]
+        await _apply(matches, "on", new_temp)
+
     else:
-        result["message"] = "Command processed"
-    
-    return result
+        return {
+            "success": False,
+            "command": cmd.command,
+            "action": action_type,
+            "message": f"Unknown action type '{action_type}'. Supported: scene, light_control, door_lock, door_unlock, thermostat_set.",
+            "devices_actuated": [],
+            "errors": [],
+        }
+
+    logger.info(
+        "Voice command actuated %d device(s), %d error(s)",
+        len(actuated), len(errors)
+    )
+
+    return {
+        "success": True,
+        "command": cmd.command,
+        "action": action_type,
+        "devices_actuated": actuated,
+        "errors": errors,
+    }
 
 
 # =====================================================

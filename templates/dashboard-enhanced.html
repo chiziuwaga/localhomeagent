@@ -621,28 +621,91 @@
     </main>
 
     <script>
-        // Sample device data
-        const sampleDevices = [
-            { id: 1, name: 'Living Room Lights', room: 'Living Room', icon: '💡', type: 'light', state: true, online: true },
-            { id: 2, name: 'Smart Thermostat', room: 'Hallway', icon: '🌡️', type: 'climate', state: true, online: true },
-            { id: 3, name: 'Kitchen Lights', room: 'Kitchen', icon: '💡', type: 'light', state: false, online: true },
-            { id: 4, name: 'Security Camera', room: 'Entrance', icon: '📷', type: 'camera', state: true, online: true },
-            { id: 5, name: 'Smart Lock', room: 'Front Door', icon: '🔐', type: 'lock', state: true, online: true },
-            { id: 6, name: 'Bedroom Speaker', room: 'Bedroom 1', icon: '🔊', type: 'media', state: false, online: false },
-        ];
+        // ===== Live data =====
+        // Was: sampleDevices array. Now hydrated from /api/devices on load.
+        let devices = [];
+        let activity = [];
 
-        const sampleActivity = [
-            { icon: '💡', text: 'Living Room Lights turned on by Alex', time: '2 min ago' },
-            { icon: '🔐', text: 'Front Door unlocked', time: '15 min ago' },
-            { icon: '🤖', text: 'AI: Temperature adjusted to 72°F', time: '1 hour ago' },
-            { icon: '📷', text: 'Motion detected at entrance', time: '2 hours ago' },
-            { icon: '💬', text: 'Guest requested WiFi access', time: '3 hours ago' },
-        ];
+        const ICON_BY_TYPE = {
+            light: '💡',
+            climate: '🌡️',
+            thermostat: '🌡️',
+            camera: '📷',
+            lock: '🔐',
+            media: '🔊',
+            speaker: '🔊',
+            sensor: '📡',
+            blind: '🪟',
+            alarm: '🚨',
+        };
 
-        // Render devices
+        async function fetchJson(url, options = {}) {
+            const r = await fetch(url, { credentials: 'include', ...options });
+            if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+            return r.json();
+        }
+
+        async function loadDevices() {
+            try {
+                const data = await fetchJson('/api/devices');
+                // Endpoint shape: {devices: [...]} OR bare array — handle both.
+                devices = (Array.isArray(data) ? data : (data.devices || data || [])).map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    room: d.room || d.location || '',
+                    icon: ICON_BY_TYPE[d.type] || '🔌',
+                    type: d.type,
+                    state: d.state === 'on' || d.state === true || d.state === 'unlocked',
+                    rawState: d.state,
+                    online: d.online !== false,
+                }));
+                renderDevices();
+            } catch (e) {
+                console.warn('[dashboard] failed to load /api/devices:', e.message);
+                document.getElementById('deviceGrid').innerHTML =
+                    '<div class="empty-state" style="padding:20px;color:#999;">Could not load devices. Server returned ' + e.message + '</div>';
+            }
+        }
+
+        async function loadActivity() {
+            try {
+                // Reuse the audit-log statistics endpoint as activity feed.
+                const data = await fetchJson('/api/audit/recent?limit=8').catch(() => ({events: []}));
+                activity = (data.events || []).map(ev => ({
+                    icon: ev.icon || '📋',
+                    text: ev.message || `${ev.action_type} on ${ev.target}`,
+                    time: ev.timestamp || '',
+                }));
+                renderActivity();
+            } catch (e) {
+                console.warn('[dashboard] failed to load activity:', e.message);
+            }
+        }
+
+        async function loadHealth() {
+            try {
+                const data = await fetchJson('/api/health');
+                const badge = document.getElementById('healthBadge');
+                if (badge) {
+                    badge.textContent = data.status === 'ok' ? 'All systems go' :
+                        data.status === 'degraded' ? `Degraded · ${(data.degraded_reasons || []).join(', ')}` :
+                        'Offline';
+                    badge.className = 'health-badge ' + data.status;
+                }
+            } catch (e) {
+                console.warn('[dashboard] /api/health failed:', e.message);
+            }
+        }
+
+        // ===== Renderers (unchanged structure, sourced from `devices`) =====
         function renderDevices() {
             const grid = document.getElementById('deviceGrid');
-            grid.innerHTML = sampleDevices.map(device => `
+            if (!grid) return;
+            if (devices.length === 0) {
+                grid.innerHTML = '<div class="empty-state" style="padding:20px;color:#999;">No devices paired yet. Use the IoT Pairing Wizard to add one.</div>';
+                return;
+            }
+            grid.innerHTML = devices.map(device => `
                 <div class="device-card ${device.state ? 'active' : ''}" data-id="${device.id}">
                     <div class="device-header">
                         <div class="device-info">
@@ -652,8 +715,8 @@
                                 <div class="device-room">${device.room}</div>
                             </div>
                         </div>
-                        <div class="device-toggle ${device.state ? 'on' : ''}" 
-                             onclick="toggleDevice(${device.id})"></div>
+                        <div class="device-toggle ${device.state ? 'on' : ''}"
+                             onclick="toggleDevice('${device.id}')"></div>
                     </div>
                     <div class="device-body">
                         <div class="device-status">
@@ -661,18 +724,22 @@
                             ${device.online ? 'Online' : 'Offline'}
                         </div>
                         <div class="device-controls">
-                            <button class="device-btn" onclick="showDeviceDetails(${device.id})">Details</button>
-                            <button class="device-btn" onclick="configureDevice(${device.id})">Configure</button>
+                            <button class="device-btn" onclick="showDeviceDetails('${device.id}')">Details</button>
+                            <button class="device-btn" onclick="configureDevice('${device.id}')">Configure</button>
                         </div>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Render activity
         function renderActivity() {
             const list = document.getElementById('activityList');
-            list.innerHTML = sampleActivity.map(item => `
+            if (!list) return;
+            if (activity.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding:16px;color:#999;">No recent activity.</div>';
+                return;
+            }
+            list.innerHTML = activity.map(item => `
                 <div class="activity-item">
                     <div class="activity-icon">${item.icon}</div>
                     <div class="activity-content">
@@ -683,36 +750,68 @@
             `).join('');
         }
 
-        // Toggle device
-        function toggleDevice(id) {
-            const device = sampleDevices.find(d => d.id === id);
-            if (device) {
+        // ===== Actions wired to the real endpoints =====
+        async function toggleDevice(id) {
+            const device = devices.find(d => String(d.id) === String(id));
+            if (!device) return;
+            const newState = device.type === 'lock'
+                ? (device.state ? 'unlocked' : 'locked')
+                : (device.state ? 'off' : 'on');
+            try {
+                await fetchJson('/api/voice/command', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        command: `Toggle ${device.name}`,
+                        action: {
+                            type: device.type === 'lock' ? (newState === 'locked' ? 'door_lock' : 'door_unlock')
+                                : 'light_control',
+                            target: device.id,
+                            state: newState === 'on' || newState === 'locked',
+                        },
+                    }),
+                });
                 device.state = !device.state;
                 renderDevices();
-                
-                // Haptic feedback
                 if (navigator.vibrate) navigator.vibrate(10);
+            } catch (e) {
+                console.error('toggle failed:', e);
             }
         }
 
-        // Scene triggers
-        function triggerScene(scene) {
-            console.log('Triggering scene:', scene);
-            // API call would go here
-            if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+        async function triggerScene(scene) {
+            try {
+                await fetchJson(`/api/scenes/${encodeURIComponent(scene)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                });
+                // Refresh device states after a scene runs
+                await loadDevices();
+                if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+            } catch (e) {
+                console.error(`Scene '${scene}' failed:`, e);
+            }
         }
 
         function showDeviceDetails(id) {
-            console.log('Show details for device:', id);
+            const device = devices.find(d => String(d.id) === String(id));
+            if (device) alert(`${device.name}\nType: ${device.type}\nState: ${device.rawState}\nRoom: ${device.room}`);
         }
 
         function configureDevice(id) {
-            console.log('Configure device:', id);
+            window.location.href = `/settings#device-${id}`;
         }
 
-        // Initialize
-        renderDevices();
-        renderActivity();
+        // ===== Initialize + 10s refresh loop =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDevices();
+            loadActivity();
+            loadHealth();
+        });
+        setInterval(() => {
+            loadDevices();
+            loadHealth();
+        }, 10_000);
     </script>
     <!-- Theme Manager (P5) -->
     <script src="/static/js/theme-manager.js"></script>
