@@ -167,27 +167,47 @@ def verify_pin(pin: str, hashed: str) -> bool:
 import ipaddress as _ipaddress  # noqa: E402
 
 
+_LOCAL_NETS = (
+    _ipaddress.ip_network("10.0.0.0/8"),
+    _ipaddress.ip_network("172.16.0.0/12"),
+    _ipaddress.ip_network("192.168.0.0/16"),
+    _ipaddress.ip_network("169.254.0.0/16"),  # IPv4 link-local
+    _ipaddress.ip_network("fc00::/7"),         # IPv6 unique-local
+    _ipaddress.ip_network("fe80::/10"),        # IPv6 link-local
+)
+
+
 def is_request_from_local_network(request: Request) -> bool:
     """
     Returns True if the request's TCP peer is on a private/link-local
-    network (RFC1918 + 169.254/16 + fe80::/10).
+    network. Strict RFC1918 + IPv6 ULA/link-local — not Python's
+    ipaddress.is_private which mis-includes TEST-NET ranges like
+    203.0.113.0/24.
 
     Loopback (127.0.0.1, ::1) is rejected by default — a developer hitting
     localhost should NOT get a free guest session. Set
-    ``LHA_ALLOW_LOOPBACK_GUEST=1`` for dev-only override.
+    ``LHA_ALLOW_LOOPBACK_GUEST=1`` for dev-only override. The test
+    pseudo-hostname "testclient" / "localhost" is treated as loopback
+    for the same dev override.
 
     Use this BEFORE any auth check on guest-only endpoints. Header values
-    are deliberately ignored.
+    are deliberately ignored — only request.client.host matters.
     """
     if not request.client:
         return False
+    host = request.client.host
+    allow_loopback = os.environ.get("LHA_ALLOW_LOOPBACK_GUEST") == "1"
     try:
-        ip = _ipaddress.ip_address(request.client.host)
+        ip = _ipaddress.ip_address(host)
     except ValueError:
+        # Starlette TestClient peer is "testclient" (not an IP). Treat as
+        # loopback for dev/test only.
+        if host in ("testclient", "localhost") and allow_loopback:
+            return True
         return False
     if ip.is_loopback:
-        return os.environ.get("LHA_ALLOW_LOOPBACK_GUEST") == "1"
-    return ip.is_private or ip.is_link_local
+        return allow_loopback
+    return any(ip in net for net in _LOCAL_NETS)
 
 
 # Issue a JWT for a guest device. The "gpe" (guest-pin-epoch) claim
