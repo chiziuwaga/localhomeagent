@@ -74,6 +74,10 @@ from .system_check import create_system_routes
 # P7: Platform pairing — agent ↔ Co-Living user link
 from .platform_pairing import create_platform_pairing_routes
 
+# Bluetooth pairing + log streaming — modules existed but were never mounted
+from .bluetooth_pairing import create_bluetooth_routes
+from .log_manager import create_log_routes
+
 # Auth middleware (replaces hardcoded admin_id defaults and spoofable headers)
 from .auth import (
     get_current_user, require_admin, require_operator_or_admin,
@@ -212,6 +216,8 @@ app.include_router(create_persona_routes())  # D2.4: Custom persona builder
 app.include_router(create_encryption_routes())  # D2.6: End-to-end encryption
 app.include_router(create_system_routes())  # P6: Hardware check API
 app.include_router(create_platform_pairing_routes())  # P7: Co-Living pairing handshake
+app.include_router(create_bluetooth_routes())  # BLE pairing wizard endpoints
+app.include_router(create_log_routes())  # Recent logs + live WS log stream
 create_notification_routes(app)  # WiFi/BLE push notifications to admin mobile
 create_queue_auth_routes(app)  # Per-queue auth for multi-resident isolation
 
@@ -1858,27 +1864,25 @@ async def control_device(device_id: str, command: Dict[str, Any], request: Reque
         "home_assistant": ha_result
     }
 
-@app.get("/api/users")
-async def get_users():
-    """Get all users"""
-    return data_store.users
+# Note: /api/users GET+POST and /api/messages GET removed in Tier-1 cleanup.
+# The auth-gated RBAC versions at lines ~795 and ~814 are the canonical
+# endpoints. /api/messages POST below is the LLM-chat endpoint, renamed
+# to /api/chat to stop shadowing /api/messages POST at line 1006 (RBAC
+# direct messaging between users).
 
-@app.post("/api/users")
-async def add_user(user: User):
-    """Add a new user"""
-    data_store.users.append(user.model_dump())
-    return {"success": True, "user": user}
+@app.get("/api/chat/history")
+async def get_chat_history():
+    """Get LLM chat history (the agent <-> user conversation)."""
+    return {"messages": data_store.messages}
 
-@app.get("/api/messages")
-async def get_messages():
-    """Get chat messages"""
-    return data_store.messages
-
-@app.post("/api/messages")
-async def send_message(message: Message):
+@app.post("/api/chat")
+async def chat_with_agent(message: Message):
     """
-    Send a message and get AI response using local LLM
-    Applies thermodynamic energy model for security-sensitive queries
+    Send a message to the local-LLM agent and stream back its reply.
+    Applies thermodynamic energy model for security-sensitive queries.
+
+    Was previously @app.post("/api/messages") which shadowed the RBAC
+    direct-messaging endpoint at line 1006. Renamed in Tier-1 cleanup.
     """
     # Store user message
     data_store.messages.append(message.model_dump())

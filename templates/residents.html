@@ -374,10 +374,10 @@
         // Load users and rooms
         async function loadUsersAndRooms() {
             try {
-                // Load users
+                // Load users — RBAC endpoint returns {users: [...]}, not a bare array
                 const usersRes = await fetch('/api/users');
-                const users = await usersRes.json();
-                renderUsers(users);
+                const usersData = await usersRes.json();
+                renderUsers(usersData.users || []);
 
                 // Load rooms
                 const roomsRes = await fetch(`/api/chat/rooms/${currentUserId}`);

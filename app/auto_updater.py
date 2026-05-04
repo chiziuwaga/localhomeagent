@@ -21,8 +21,11 @@ import hashlib
 logger = logging.getLogger(__name__)
 
 # GitHub repository info
-GITHUB_OWNER = "Fix-It-For-Me-AI"
-GITHUB_REPO = "local-home-agent"
+# Migrated from Fix-It-For-Me-AI/local-home-agent (private) to the public
+# chiziuwaga/localhomeagent in v2.0.0; auto-updates must hit the canonical
+# public repo or every update check 404s.
+GITHUB_OWNER = "chiziuwaga"
+GITHUB_REPO = "localhomeagent"
 RELEASES_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases"
 

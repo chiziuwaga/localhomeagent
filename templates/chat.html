@@ -366,8 +366,9 @@
             showThinking();
 
             try {
-                // Send to API
-                const response = await fetch('/api/messages', {
+                // Send to LLM-chat endpoint (renamed from /api/messages so
+                // it stops shadowing the RBAC direct-messaging endpoint).
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
