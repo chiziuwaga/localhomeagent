@@ -12,7 +12,12 @@ Schema::
         "passphrase":          "<urlsafe token>",
         "admin_pin":           "<digits>",          # raw — bcrypt-hashed in memory
         "jwt_secret":          "<urlsafe token>",
-        "first_run_complete":  false                # flips to true after /setup
+        "first_run_complete":  false,               # flips to true after /setup
+
+        # Guest auto-login (admin-pre-set guest PIN; LAN-only)
+        "guest_pin_hash":      "<bcrypt>",          # never raw on disk
+        "guest_pin_enabled":   false,
+        "guest_pin_set_at":    1714752000           # unix epoch — bumps on rotate to invalidate live tokens
     }
 """
 
@@ -88,3 +93,42 @@ def generate_bootstrap_pin() -> str:
 
 def generate_token(nbytes: int = 32) -> str:
     return secrets.token_urlsafe(nbytes)
+
+
+# ---------------------------------------------------------------------------
+# Guest PIN — admin-pre-set credential for LAN-only auto-login
+# ---------------------------------------------------------------------------
+
+def get_guest_pin_hash() -> Optional[str]:
+    """Returns the stored bcrypt hash of the guest PIN, or None if unset."""
+    return read_secrets().get("guest_pin_hash")
+
+
+def is_guest_pin_enabled() -> bool:
+    """True iff the admin has both set a guest PIN and toggled it on."""
+    cfg = read_secrets()
+    return bool(cfg.get("guest_pin_enabled")) and bool(cfg.get("guest_pin_hash"))
+
+
+def set_guest_pin(*, pin_hash: str, enabled: bool, set_at: int) -> dict:
+    """Persist guest-PIN state. Bumping set_at invalidates live guest JWTs."""
+    return update(
+        guest_pin_hash=pin_hash,
+        guest_pin_enabled=enabled,
+        guest_pin_set_at=set_at,
+    )
+
+
+def disable_guest_pin() -> dict:
+    """Soft-disable: keeps the hash but flips enabled to false. Bumps epoch
+    so any live guest tokens are invalidated."""
+    cfg = read_secrets()
+    cfg["guest_pin_enabled"] = False
+    cfg["guest_pin_set_at"] = int(__import__("time").time())
+    write_secrets(cfg)
+    return cfg
+
+
+def get_guest_pin_epoch() -> int:
+    """Unix epoch of the last guest-PIN rotation. 0 if never set."""
+    return int(read_secrets().get("guest_pin_set_at") or 0)

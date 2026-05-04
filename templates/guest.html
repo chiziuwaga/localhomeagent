@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guest — Local Home Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      background: #fff;
+      color: #000;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      border-bottom: 4px solid #000;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    header .accent { color: #e63946; }
+    .role-pill {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      background: #000;
+      color: #fff;
+      border: 2px solid #000;
+    }
+    main {
+      flex: 1;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+    .messages {
+      flex: 1;
+      border: 4px solid #000;
+      padding: 16px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      min-height: 320px;
+      background: #fafafa;
+    }
+    .msg {
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border: 2px solid #000;
+      max-width: 85%;
+      word-wrap: break-word;
+    }
+    .msg.user { background: #fff; margin-left: auto; }
+    .msg.assistant { background: #f0f0f0; margin-right: auto; }
+    .msg.thinking { background: #fff; opacity: 0.6; font-style: italic; }
+    form { display: flex; gap: 8px; }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      border: 4px solid #000;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    button {
+      padding: 12px 18px;
+      border: 4px solid #000;
+      background: #e63946;
+      color: #fff;
+      font-family: inherit;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #000;
+    }
+    button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; }
+    button:active { transform: translate(2px, 2px); box-shadow: none; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .empty { color: #888; text-align: center; padding: 40px 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span class="accent">●</span> Guest chat</h1>
+    <span class="role-pill">Guest</span>
+  </header>
+  <main>
+    <div id="messages" class="messages">
+      <div class="empty">Ask a question about the house — Wi-Fi password, where the trash goes, parking, anything.</div>
+    </div>
+    <form id="form" autocomplete="off">
+      <input type="text" id="input" placeholder="Type your question…" />
+      <button type="submit" id="send">SEND</button>
+    </form>
+  </main>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+
+    function addMsg(role, text, opts = {}) {
+      // Clear empty state if first msg
+      const empty = messagesEl.querySelector('.empty');
+      if (empty) empty.remove();
+      const div = document.createElement('div');
+      div.className = `msg ${role}` + (opts.thinking ? ' thinking' : '');
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      sendBtn.disabled = true;
+      addMsg('user', text);
+      const thinking = addMsg('assistant', 'thinking…', { thinking: true });
+      try {
+        const r = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            id: `g-${Date.now()}`,
+            user_id: 'guest',
+            content: text,
+            role: 'user',
+            timestamp: new Date().toISOString(),
+          }),
+        });
+        thinking.remove();
+        if (!r.ok) {
+          if (r.status === 401 || r.status === 403) {
+            addMsg('assistant', 'Your guest session expired. Please sign in again.');
+            setTimeout(() => { window.location.href = '/guest-login'; }, 1200);
+          } else {
+            addMsg('assistant', `Error: ${r.status}`);
+          }
+          return;
+        }
+        const data = await r.json();
+        addMsg('assistant', data.response?.content || JSON.stringify(data));
+      } catch (err) {
+        thinking.remove();
+        addMsg('assistant', 'Network error: ' + err.message);
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    });
+  </script>
+</body>
+</html>

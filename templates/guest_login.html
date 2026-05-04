@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guest Login — Local Home Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      background: #fff;
+      color: #000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      border: 4px solid #000;
+      box-shadow: 8px 8px 0 #000;
+      background: #fff;
+      padding: 32px;
+    }
+    h1 {
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+    .accent { color: #e63946; }
+    .subtitle {
+      font-size: 13px;
+      color: #444;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #000;
+      font-family: inherit;
+      font-size: 16px;
+      background: #fff;
+      margin-bottom: 18px;
+      letter-spacing: 0.2em;
+      text-align: center;
+    }
+    input[type="password"]:focus { outline: 3px solid #e63946; outline-offset: -1px; }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 4px solid #000;
+      background: #e63946;
+      color: #fff;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 #000;
+      transition: transform 0.06s;
+    }
+    button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #000; }
+    button:active { transform: translate(2px, 2px); box-shadow: none; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 4px 4px 0 #000; }
+    .feedback {
+      display: none;
+      padding: 10px 12px;
+      border: 2px solid;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+    .feedback.error { background: #fee; border-color: #c33; color: #900; }
+    .feedback.ok { background: #efe; border-color: #3c3; color: #060; }
+    .footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #666;
+      letter-spacing: 0.04em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1><span class="accent">●</span> Guest Login</h1>
+    <p class="subtitle">
+      Enter the guest PIN your host gave you. This sign-in only works while
+      you're connected to the property's local Wi-Fi.
+    </p>
+
+    <div id="err" class="feedback error"></div>
+    <div id="ok" class="feedback ok"></div>
+
+    <form id="form" autocomplete="off">
+      <label for="pin">Guest PIN</label>
+      <input type="password" id="pin" inputmode="numeric" maxlength="8" autofocus />
+      <button type="submit" id="submit">SIGN IN</button>
+    </form>
+
+    <div class="footer">
+      Don't have a PIN? Ask the property admin.<br />
+      Already an admin? <a href="/setup" style="color: #000;">Use the full login</a>.
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const errEl = document.getElementById('err');
+    const okEl = document.getElementById('ok');
+    const submitBtn = document.getElementById('submit');
+
+    function showErr(msg) {
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      okEl.style.display = 'none';
+    }
+    function showOk(msg) {
+      okEl.textContent = msg;
+      okEl.style.display = 'block';
+      errEl.style.display = 'none';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = document.getElementById('pin').value.trim();
+      if (!/^\d{4,8}$/.test(pin)) return showErr('PIN must be 4-8 digits.');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'CHECKING…';
+      try {
+        const r = await fetch('/api/auth/guest-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ pin }),
+        });
+        const data = await r.json();
+        if (r.ok && data.success) {
+          showOk('Welcome. Loading the guest area…');
+          submitBtn.textContent = 'OK';
+          setTimeout(() => { window.location.href = '/guest'; }, 600);
+        } else {
+          showErr(data.error || 'Could not sign in.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'SIGN IN';
+        }
+      } catch (err) {
+        showErr('Network error: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SIGN IN';
+      }
+    });
+  </script>
+</body>
+</html>

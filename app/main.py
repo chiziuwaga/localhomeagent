@@ -1298,6 +1298,56 @@ async def chat_interface(request: Request):
         "request": request
     })
 
+@app.get("/guest-login", response_class=HTMLResponse)
+async def guest_login_page(request: Request):
+    """
+    Guest auto-login page. Renders only if request is on the local network
+    AND a guest PIN is enabled — otherwise shows a friendly explanation.
+    """
+    if not is_request_from_local_network(request):
+        return HTMLResponse(
+            content=(
+                "<!doctype html><html><head><title>Not on local network</title></head>"
+                "<body style='font-family:monospace;padding:40px;text-align:center;'>"
+                "<h1>Connect to the property's Wi-Fi</h1>"
+                "<p>Guest auto-login only works while you're on the on-site network.</p>"
+                "</body></html>"
+            ),
+            status_code=403,
+        )
+    if not secret_store.is_guest_pin_enabled():
+        return HTMLResponse(
+            content=(
+                "<!doctype html><html><head><title>Guest auto-login not enabled</title></head>"
+                "<body style='font-family:monospace;padding:40px;text-align:center;'>"
+                "<h1>Guest auto-login is not configured</h1>"
+                "<p>Ask the property admin to set a guest PIN in Settings -> Security.</p>"
+                "</body></html>"
+            ),
+            status_code=403,
+        )
+    return templates.TemplateResponse("guest_login.html", {"request": request})
+
+
+@app.get("/guest", response_class=HTMLResponse)
+async def guest_page(request: Request):
+    """
+    Guest chat surface. Requires a guest-role session cookie issued by
+    /api/auth/guest-login. Anyone without one is bounced back to /guest-login.
+    """
+    from .auth import verify_token as _vt, verify_guest_token_epoch
+    token = request.cookies.get("lha_session")
+    if not token:
+        return RedirectResponse(url="/guest-login", status_code=302)
+    user = _vt(token)
+    if not user or user.role != "guest":
+        return RedirectResponse(url="/guest-login", status_code=302)
+    # Verify the guest's gpe claim matches the current server epoch — admin
+    # rotating or disabling the guest PIN bumps the epoch, instantly revoking.
+    if not verify_guest_token_epoch(token, secret_store.get_guest_pin_epoch()):
+        return RedirectResponse(url="/guest-login", status_code=302)
+    return templates.TemplateResponse("guest.html", {"request": request})
+
 @app.get("/residents", response_class=HTMLResponse)
 async def residents_chat(request: Request):
     """
@@ -2717,6 +2767,121 @@ async def rotate_passphrase(
     logger.info("Passphrase rotated (in-memory + persisted)")
 
     return {"success": True, "message": "Passphrase updated successfully"}
+
+
+# ----------------------------------------------------------------------------
+# Guest PIN — admin pre-sets a PIN; LAN-only guests use it to auto-login.
+# See app/auth.py is_request_from_local_network for the IP gate.
+# ----------------------------------------------------------------------------
+
+class GuestPinSetRequest(BaseModel):
+    new_pin: str
+    enabled: bool = True
+
+
+class GuestLoginRequest(BaseModel):
+    pin: str
+
+
+@app.get("/api/admin/guest-pin")
+async def get_guest_pin_state(_caller: AuthenticatedUser = Depends(require_admin)):
+    """Returns whether a guest PIN is configured + whether it's enabled.
+    The hash itself is never returned."""
+    return {
+        "configured": secret_store.get_guest_pin_hash() is not None,
+        "enabled": secret_store.is_guest_pin_enabled(),
+        "set_at": secret_store.get_guest_pin_epoch(),
+    }
+
+
+@app.post("/api/admin/guest-pin")
+async def set_guest_pin(req: GuestPinSetRequest, _caller: AuthenticatedUser = Depends(require_admin)):
+    """Admin sets/rotates the guest PIN. Bumps the guest_pin_set_at epoch
+    so any live guest tokens are invalidated on next request."""
+    err = _validate_pin(req.new_pin)
+    if err:
+        return JSONResponse(status_code=400, content={"success": False, "error": err})
+
+    pin_hash = hash_pin(req.new_pin)
+    secret_store.set_guest_pin(
+        pin_hash=pin_hash,
+        enabled=bool(req.enabled),
+        set_at=int(time.time()),
+    )
+    logger.info("Guest PIN set/rotated by admin (enabled=%s)", req.enabled)
+    return {"success": True, "message": "Guest PIN saved.", "enabled": bool(req.enabled)}
+
+
+@app.delete("/api/admin/guest-pin")
+async def disable_guest_pin(_caller: AuthenticatedUser = Depends(require_admin)):
+    """Soft-disable: keeps the hash but flips enabled=false. Bumps epoch
+    so live guest tokens stop working."""
+    secret_store.disable_guest_pin()
+    logger.info("Guest PIN disabled by admin")
+    return {"success": True, "message": "Guest auto-login disabled."}
+
+
+@app.post("/api/auth/guest-login")
+async def guest_login(req: GuestLoginRequest, request: Request):
+    """LAN-only guest login. Requires:
+      1. Request's TCP peer is on a private network (auth.is_request_from_local_network)
+      2. Guest PIN is enabled by admin
+      3. Submitted PIN matches the stored bcrypt hash
+
+    Issues a guest-role JWT (gpe claim = current epoch) as cookie + body."""
+    # Local-network gate first — never trust headers, only the TCP peer.
+    if not is_request_from_local_network(request):
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "error": "Guest auto-login is restricted to the property's local network. Connect to the on-site Wi-Fi and try again.",
+            },
+        )
+
+    if not secret_store.is_guest_pin_enabled():
+        return JSONResponse(
+            status_code=403,
+            content={"success": False, "error": "Guest auto-login is not enabled. Ask the admin to set a guest PIN."},
+        )
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(client_ip):
+        return JSONResponse(status_code=429, content={"success": False, "error": "Too many attempts."})
+
+    stored_hash = secret_store.get_guest_pin_hash()
+    if not stored_hash or not verify_pin(req.pin, stored_hash):
+        _record_attempt(client_ip)
+        return JSONResponse(status_code=403, content={"success": False, "error": "Wrong PIN."})
+
+    epoch = secret_store.get_guest_pin_epoch()
+    guest_id = f"guest-{secrets.token_hex(4)}"
+    token = create_guest_token(user_id=guest_id, guest_pin_epoch=epoch)
+
+    response = JSONResponse(
+        content={
+            "success": True,
+            "user": {"id": guest_id, "role": "guest"},
+            "token": token,
+        }
+    )
+    response.set_cookie(
+        "lha_session",
+        token,
+        max_age=8 * 3600,
+        httponly=True,
+        samesite="strict",
+    )
+    logger.info("Guest %s logged in from %s", guest_id, client_ip)
+    return response
+
+
+# Auth helper kept locally so we don't pollute auth.py with imports it doesn't need
+from .auth import (  # noqa: E402
+    is_request_from_local_network,
+    create_guest_token,
+)
+import secrets  # noqa: E402
 
 
 # ========================================

@@ -153,3 +153,68 @@ def verify_pin(pin: str, hashed: str) -> bool:
         return bcrypt.checkpw(pin.encode(), hashed.encode())
     except Exception:
         return False
+
+
+# ---------------------------------------------------------------------------
+# Local-network detection (used by the guest-PIN auto-login flow)
+#
+# Hard rule: never trust X-Forwarded-For / X-Real-IP. Read only the actual
+# TCP peer (request.client.host). This defeats spoofing through a proxy
+# header AND DNS rebinding — rebinding can change the hostname but cannot
+# change the source IP of the TCP connection.
+# ---------------------------------------------------------------------------
+
+import ipaddress as _ipaddress  # noqa: E402
+
+
+def is_request_from_local_network(request: Request) -> bool:
+    """
+    Returns True if the request's TCP peer is on a private/link-local
+    network (RFC1918 + 169.254/16 + fe80::/10).
+
+    Loopback (127.0.0.1, ::1) is rejected by default — a developer hitting
+    localhost should NOT get a free guest session. Set
+    ``LHA_ALLOW_LOOPBACK_GUEST=1`` for dev-only override.
+
+    Use this BEFORE any auth check on guest-only endpoints. Header values
+    are deliberately ignored.
+    """
+    if not request.client:
+        return False
+    try:
+        ip = _ipaddress.ip_address(request.client.host)
+    except ValueError:
+        return False
+    if ip.is_loopback:
+        return os.environ.get("LHA_ALLOW_LOOPBACK_GUEST") == "1"
+    return ip.is_private or ip.is_link_local
+
+
+# Issue a JWT for a guest device. The "gpe" (guest-pin-epoch) claim
+# matches secret_store.get_guest_pin_epoch() at issuance time; rotating
+# or disabling the guest PIN bumps the epoch on the server, instantly
+# invalidating every live guest token on the next request.
+def create_guest_token(user_id: str, guest_pin_epoch: int) -> str:
+    payload = {
+        "sub": user_id,
+        "role": "guest",
+        "name": "guest",
+        "iat": time.time(),
+        "exp": time.time() + TOKEN_EXPIRY_SECONDS,
+        "gpe": guest_pin_epoch,
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def verify_guest_token_epoch(token: str, current_epoch: int) -> bool:
+    """For guest tokens only: also verifies the gpe claim matches the
+    current server-side epoch. Returns False if expired, signed wrong, or
+    revoked by an epoch bump."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return (
+            payload.get("role") == "guest"
+            and payload.get("gpe") == current_epoch
+        )
+    except jwt.InvalidTokenError:
+        return False

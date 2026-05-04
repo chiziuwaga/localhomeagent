@@ -421,6 +421,32 @@
 
             <hr style="margin: 28px 0; border: 0; border-top: 2px solid #000;">
 
+            <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.05em;">Guest Auto-Login PIN</h3>
+            <p class="help-text" style="margin-bottom: 16px;">
+                Anyone on the property's local Wi-Fi who knows this PIN can access the
+                guest chat without a full admin login. Disable this if you don't want guest auto-login.
+                Status: <strong id="guest-pin-status">checking…</strong>
+            </p>
+            <div class="form-group">
+                <label for="gp-new">New Guest PIN (4-8 digits)</label>
+                <input type="password" id="gp-new" inputmode="numeric" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label for="gp-confirm">Confirm Guest PIN</label>
+                <input type="password" id="gp-confirm" inputmode="numeric" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="gp-enabled" checked>
+                    Enable guest auto-login
+                </label>
+            </div>
+            <div id="gp-feedback" style="display:none; padding:10px; margin-bottom:12px; font-family:monospace; font-size:13px;"></div>
+            <button onclick="saveGuestPin()">Save Guest PIN</button>
+            <button onclick="disableGuestPin()" style="margin-left:8px;">Disable</button>
+
+            <hr style="margin: 28px 0; border: 0; border-top: 2px solid #000;">
+
             <div class="form-group">
                 <label>
                     <input type="checkbox" id="voiceVerificationEnabled">
@@ -491,6 +517,68 @@
                         _showFeedback('pp-feedback', data.error || 'Rotation failed.', false);
                     }
                 } catch (e) { _showFeedback('pp-feedback', 'Network error: ' + e.message, false); }
+            }
+
+            async function loadGuestPinStatus() {
+                try {
+                    const r = await fetch('/api/admin/guest-pin', {credentials: 'include'});
+                    if (!r.ok) {
+                        document.getElementById('guest-pin-status').textContent = 'unavailable';
+                        return;
+                    }
+                    const data = await r.json();
+                    const status = !data.configured
+                        ? 'not configured'
+                        : (data.enabled ? 'enabled' : 'disabled');
+                    document.getElementById('guest-pin-status').textContent = status;
+                    document.getElementById('gp-enabled').checked = data.enabled;
+                } catch (e) {
+                    document.getElementById('guest-pin-status').textContent = 'unknown';
+                }
+            }
+            // Load status on settings open
+            if (document.getElementById('guest-pin-status')) loadGuestPinStatus();
+
+            async function saveGuestPin() {
+                const nw = document.getElementById('gp-new').value.trim();
+                const cf = document.getElementById('gp-confirm').value.trim();
+                const enabled = document.getElementById('gp-enabled').checked;
+                if (!/^\d{4,8}$/.test(nw)) return _showFeedback('gp-feedback', 'PIN must be 4-8 digits.', false);
+                if (nw !== cf) return _showFeedback('gp-feedback', 'PINs do not match.', false);
+                try {
+                    const r = await fetch('/api/admin/guest-pin', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        credentials: 'include',
+                        body: JSON.stringify({new_pin: nw, enabled}),
+                    });
+                    const data = await r.json();
+                    if (r.ok && data.success) {
+                        _showFeedback('gp-feedback', 'Guest PIN saved.', true);
+                        document.getElementById('gp-new').value = '';
+                        document.getElementById('gp-confirm').value = '';
+                        loadGuestPinStatus();
+                    } else {
+                        _showFeedback('gp-feedback', data.error || 'Save failed.', false);
+                    }
+                } catch (e) { _showFeedback('gp-feedback', 'Network error: ' + e.message, false); }
+            }
+
+            async function disableGuestPin() {
+                if (!confirm('Disable guest auto-login? Live guest sessions will be invalidated.')) return;
+                try {
+                    const r = await fetch('/api/admin/guest-pin', {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const data = await r.json();
+                    if (r.ok && data.success) {
+                        _showFeedback('gp-feedback', 'Guest auto-login disabled.', true);
+                        loadGuestPinStatus();
+                    } else {
+                        _showFeedback('gp-feedback', data.error || 'Disable failed.', false);
+                    }
+                } catch (e) { _showFeedback('gp-feedback', 'Network error: ' + e.message, false); }
             }
         </script>
 
