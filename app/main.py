@@ -1149,17 +1149,37 @@ class Settings(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     """
-    Landing page - serves as WiFi captive portal
-    Uses enhanced Neo-Brutalist + Swiss design template (P5)
+    Landing page — role-aware routing.
+
+    Reads the lha_session cookie (if present), decodes the JWT, and dispatches
+    to the appropriate surface:
+      - admin / operator -> /dashboard (full control)
+      - resident         -> /residents (peer chat + room queue)
+      - guest            -> /guest      (stripped chat-only)
+      - no session       -> the brutalist landing / captive portal
     """
-    # Check if captive portal request (used for WiFi login detection)
     is_captive = request.query_params.get("captive") == "1"
-    
+
+    token = request.cookies.get("lha_session")
+    if token:
+        from .auth import verify_token as _vt, verify_guest_token_epoch
+        user = _vt(token)
+        if user:
+            if user.role in ("admin", "operator"):
+                return RedirectResponse(url="/dashboard", status_code=302)
+            if user.role == "resident":
+                return RedirectResponse(url="/residents", status_code=302)
+            if user.role == "guest":
+                # Honour epoch revocation on every visit
+                if verify_guest_token_epoch(token, secret_store.get_guest_pin_epoch()):
+                    return RedirectResponse(url="/guest", status_code=302)
+                # Token revoked — fall through to landing
+
     return templates.TemplateResponse("index-enhanced.html", {
         "request": request,
         "home_name": data_store.settings["home_name"],
         "is_configured": data_store.settings["admin_configured"],
-        "is_captive": is_captive
+        "is_captive": is_captive,
     })
 
 @app.get("/offline", response_class=HTMLResponse)
@@ -2007,16 +2027,23 @@ async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for real-time chat and device updates.
 
-    Chat flow:
-        1. Client sends {"type": "chat", "payload": {"content": "...", "session_id": "..."}}
-        2. We persist the user message into the conversation cache.
-        3. We stream the LLM reply back via "chat_stream" frames, then a final
-           "chat_complete" frame once generation finishes.
-        4. Assistant message is also persisted so history survives restarts.
+    Role-aware: clients SHOULD pass `?token=<JWT>` (or rely on the
+    `lha_session` cookie). The decoded role drives:
+      - the LLM system prompt (admin sees full house context; resident
+        sees their room scope; guest gets the chat-only prompt)
+      - whether `device_control` frames are honoured (admin/operator only)
 
-    If no local LLM provider is detected, we send a single "chat_complete" with
-    a helpful onboarding message so the UI never hangs.
+    Anonymous WS connections still work for back-compat with the legacy
+    chat.html pages — they get the "anonymous" role and identical chat UX
+    but cannot send device_control frames.
     """
+    # Resolve identity from ?token=... or the lha_session cookie BEFORE accept
+    from .auth import verify_token as _vt
+    token = websocket.query_params.get("token") or websocket.cookies.get("lha_session")
+    ws_user = _vt(token) if token else None
+    ws_role = ws_user.role if ws_user else "anonymous"
+    ws_user_id = ws_user.user_id if ws_user else "anonymous"
+
     await websocket.accept()
     data_store.active_connections.append(websocket)
 
@@ -2084,8 +2111,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     f"Home: {data_store.settings.get('home_name', 'Co-Living Space')}\n"
                     f"Devices: {len(data_store.devices)} | Users: {len(data_store.users)}\n"
                 )
+                # Role-scoped guidance baked into the system prompt
+                role_prompt = {
+                    "admin":    "\nYou are talking to an ADMIN. Full operational context. They can change settings, control devices, manage residents.",
+                    "operator": "\nYou are talking to an OPERATOR. Property-management context. Can adjust devices and residents.",
+                    "resident": "\nYou are talking to a RESIDENT. Help with their room and shared spaces. Do NOT discuss other residents' personal details.",
+                    "guest":    "\nYou are talking to a GUEST. Answer ONLY: Wi-Fi password, parking, trash days, common-area rules, check-in/check-out, neighbourhood pointers. Refuse anything about residents, security, or device controls — politely redirect them to ask the host.",
+                    "anonymous":"\nThe caller has not authenticated. Treat as guest-tier. Same scope rules as guest.",
+                }.get(ws_role, "")
                 system_prompt = (
                     HOME_AGENT_SYSTEM_PROMPT
+                    + role_prompt
                     + "\n\n" + house_context
                     + ("\n\nConversation so far:\n" + history_block if history_block else "")
                 )
@@ -2122,6 +2158,18 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
 
             elif msg_type == "device_control":
+                # Role gate: only admin/operator may flip devices over the WS.
+                # Guests / residents / anonymous get a polite refusal frame.
+                if ws_role not in ("admin", "operator"):
+                    await websocket.send_json({
+                        "type": "device_control_denied",
+                        "payload": {
+                            "error": f"Role '{ws_role}' may not control devices. Sign in as admin/operator.",
+                            "device_id": message_data.get("payload", {}).get("device_id"),
+                        },
+                    })
+                    continue
+
                 device_id = message_data["payload"]["device_id"]
                 command = message_data["payload"]["command"]
 
